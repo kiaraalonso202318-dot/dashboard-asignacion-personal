@@ -198,7 +198,7 @@ st.markdown(
 )
 
 # ============================================================
-# FUNCIONES VISUALES
+# FUNCIONES AUXILIARES
 # ============================================================
 
 def metric_card(label, value, foot="", style_class="green"):
@@ -224,6 +224,61 @@ def id_chips(ids):
     )
 
     st.markdown(chips, unsafe_allow_html=True)
+
+
+def obtener_columnas_tareas(df):
+    """
+    Esta es la corrección importante.
+    Antes el código usaba columns[2:], pero en tu Excel actual
+    Llenadora está en la segunda columna, justo después de ID_Worker.
+    Por eso ahora se eliminan solo las columnas que NO son tareas.
+    """
+
+    columnas_no_tareas = [
+        "ID_Worker",
+        "Name",
+        "Nombre",
+        "Position",
+        "Schedule",
+        "Turno"
+    ]
+
+    columnas_tareas = [
+        col for col in df.columns
+        if str(col).strip() not in columnas_no_tareas
+    ]
+
+    return columnas_tareas
+
+
+def construir_matriz(df):
+    """
+    Construye una matriz tipo:
+    matriz[ID_Worker][Tarea] = valor
+
+    Sirve tanto para Abilities como para Speed_Factor.
+    """
+
+    columnas_tareas = obtener_columnas_tareas(df)
+
+    matriz = {}
+
+    for _, row in df.iterrows():
+
+        worker = str(row["ID_Worker"]).strip()
+
+        matriz[worker] = {}
+
+        for tarea in columnas_tareas:
+
+            valor = row[tarea]
+
+            if pd.isna(valor):
+                valor = 0
+
+            matriz[worker][str(tarea).strip()] = float(valor)
+
+    return matriz, columnas_tareas
 
 
 # ============================================================
@@ -306,17 +361,27 @@ st.success("Archivo cargado correctamente.")
 # ============================================================
 
 try:
-    tasks_df["ID_Task"] = tasks_df["ID_Task"].astype(str)
-    rel_speed_df["ID_Task"] = rel_speed_df["ID_Task"].astype(str)
+    tasks_df["ID_Task"] = tasks_df["ID_Task"].astype(str).str.strip()
+    rel_speed_df["ID_Task"] = rel_speed_df["ID_Task"].astype(str).str.strip()
 
-    workers_df["ID_Worker"] = workers_df["ID_Worker"].astype(str)
-    abilities_df["ID_Worker"] = abilities_df["ID_Worker"].astype(str)
-    speed_df["ID_Worker"] = speed_df["ID_Worker"].astype(str)
+    workers_df["ID_Worker"] = workers_df["ID_Worker"].astype(str).str.strip()
+    abilities_df["ID_Worker"] = abilities_df["ID_Worker"].astype(str).str.strip()
+    speed_df["ID_Worker"] = speed_df["ID_Worker"].astype(str).str.strip()
 
-    workers_df["Schedule"] = workers_df["Schedule"].astype(str)
+    workers_df["Schedule"] = workers_df["Schedule"].astype(str).str.strip()
 
     tasks_df["Task"] = tasks_df["Task"].astype(str).str.strip()
     rel_speed_df["Machine"] = rel_speed_df["Machine"].astype(str).str.strip()
+
+    abilities_df.columns = [
+        str(col).strip()
+        for col in abilities_df.columns
+    ]
+
+    speed_df.columns = [
+        str(col).strip()
+        for col in speed_df.columns
+    ]
 
 except Exception as e:
     st.error("Hay un problema con los nombres de columnas del Excel.")
@@ -571,63 +636,60 @@ if st.button("Calcular asignación óptima", type="primary"):
             st.stop()
 
         # ========================================================
-        # MATRIZ DE HABILIDADES
+        # MATRICES CORREGIDAS
         # ========================================================
 
-        H = {}
+        H, columnas_habilidades = construir_matriz(
+            abilities_df
+        )
 
-        for _, row in abilities_df.iterrows():
-
-            worker = row["ID_Worker"]
-
-            H[worker] = {}
-
-            for tarea in abilities_df.columns[2:]:
-
-                H[worker][tarea] = row[tarea]
+        F, columnas_speed = construir_matriz(
+            speed_df
+        )
 
         # ========================================================
-        # MATRIZ SPEED FACTOR
-        # ========================================================
-
-        F = {}
-
-        for _, row in speed_df.iterrows():
-
-            worker = row["ID_Worker"]
-
-            F[worker] = {}
-
-            for tarea in speed_df.columns[2:]:
-
-                F[worker][tarea] = row[tarea]
-
-        # ========================================================
-        # VALIDACIONES
+        # VALIDACIONES CORREGIDAS
         # ========================================================
 
         errores = []
 
         for i in presentes:
+
             if i not in H:
-                errores.append(f"El operario con ID {i} no aparece en Abilities.")
+                errores.append(
+                    f"El operario con ID {i} no aparece en Abilities."
+                )
 
             if i not in F:
-                errores.append(f"El operario con ID {i} no aparece en Speed_Factor.")
+                errores.append(
+                    f"El operario con ID {i} no aparece en Speed_Factor."
+                )
+
+        tareas_faltantes_abilities = []
+
+        tareas_faltantes_speed = []
 
         for j in tareas:
+
             nombre = nombre_tarea[j]
 
-            for i in presentes:
-                if i in H and nombre not in H[i]:
-                    errores.append(
-                        f"La tarea {nombre} no aparece como columna en Abilities."
-                    )
+            if nombre not in columnas_habilidades:
+                tareas_faltantes_abilities.append(nombre)
 
-                if i in F and nombre not in F[i]:
-                    errores.append(
-                        f"La tarea {nombre} no aparece como columna en Speed_Factor."
-                    )
+            if nombre not in columnas_speed:
+                tareas_faltantes_speed.append(nombre)
+
+        if len(tareas_faltantes_abilities) > 0:
+            errores.append(
+                "Estas tareas no aparecen como columnas en Abilities: "
+                + ", ".join(sorted(set(tareas_faltantes_abilities)))
+            )
+
+        if len(tareas_faltantes_speed) > 0:
+            errores.append(
+                "Estas tareas no aparecen como columnas en Speed_Factor: "
+                + ", ".join(sorted(set(tareas_faltantes_speed)))
+            )
 
         if len(errores) > 0:
             st.error("Hay errores en la estructura del archivo.")
@@ -645,7 +707,11 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         for i in presentes:
 
-            velocidad_estimada = V_std[ID_LLENADORA] * F[i][nombre_llenadora]
+            velocidad_estimada = (
+                V_std[ID_LLENADORA]
+                *
+                F[i][nombre_llenadora]
+            )
 
             deficit_candidato = max(
                 V_std[ID_LLENADORA] - velocidad_estimada,
@@ -747,7 +813,9 @@ if st.button("Calcular asignación óptima", type="primary"):
         # ========================================================
 
         penalizacion_llenadora = (
-            peso_deficit_llenadora * deficit[ID_LLENADORA]
+            peso_deficit_llenadora
+            *
+            deficit[ID_LLENADORA]
         )
 
         penalizacion_otras_maquinas = lpSum(
@@ -887,11 +955,17 @@ if st.button("Calcular asignación óptima", type="primary"):
         # RESOLVER
         # ========================================================
 
-        solver = PULP_CBC_CMD(msg=False)
+        solver = PULP_CBC_CMD(
+            msg=False
+        )
 
-        modelo.solve(solver)
+        modelo.solve(
+            solver
+        )
 
-        estado = LpStatus[modelo.status]
+        estado = LpStatus[
+            modelo.status
+        ]
 
         st.markdown(
             '<div class="section-title">7. Estado del modelo</div>',
@@ -899,16 +973,24 @@ if st.button("Calcular asignación óptima", type="primary"):
         )
 
         if estado == "Optimal":
+
             st.markdown(
                 '<div class="status-good">Solución óptima encontrada.</div>',
                 unsafe_allow_html=True
             )
+
         else:
+
             st.markdown(
                 '<div class="status-bad">El modelo no encontró solución óptima. Revisa si hay suficientes operarios presentes o si las restricciones son muy fuertes.</div>',
                 unsafe_allow_html=True
             )
-            st.write("Estado:", estado)
+
+            st.write(
+                "Estado:",
+                estado
+            )
+
             st.stop()
 
         # ========================================================
@@ -923,18 +1005,24 @@ if st.button("Calcular asignación óptima", type="primary"):
 
             for j in tareas:
 
-                if value(x[(i, j)]) == 1:
+                if value(
+                    x[(i, j)]
+                ) == 1:
 
                     tareas_asig.append(
                         nombre_tarea[j]
                     )
 
-            if len(tareas_asig) > 0:
+            if len(
+                tareas_asig
+            ) > 0:
 
                 asignaciones.append(
                     [
                         i,
-                        ", ".join(tareas_asig)
+                        ", ".join(
+                            tareas_asig
+                        )
                     ]
                 )
 
@@ -961,11 +1049,34 @@ if st.button("Calcular asignación óptima", type="primary"):
                         j,
                         nombre_tarea[j],
                         machine_name[j],
-                        round(V_std[j], 2),
-                        round(value(V_real[j]), 2),
-                        round(value(d[j]), 2),
-                        round(value(deficit[j]), 2),
-                        round(value(exceso[j]), 2)
+                        round(
+                            V_std[j],
+                            2
+                        ),
+                        round(
+                            value(
+                                V_real[j]
+                            ),
+                            2
+                        ),
+                        round(
+                            value(
+                                d[j]
+                            ),
+                            2
+                        ),
+                        round(
+                            value(
+                                deficit[j]
+                            ),
+                            2
+                        ),
+                        round(
+                            value(
+                                exceso[j]
+                            ),
+                            2
+                        )
                     ]
                 )
 
@@ -1003,15 +1114,29 @@ if st.button("Calcular asignación óptima", type="primary"):
             deficit[ID_LLENADORA]
         )
 
-        botellas_reales = velocidad_llenadora * minutos_turno
+        botellas_reales = (
+            velocidad_llenadora
+            *
+            minutos_turno
+        )
 
-        botellas_ideales = velocidad_ideal_llenadora * minutos_turno
+        botellas_ideales = (
+            velocidad_ideal_llenadora
+            *
+            minutos_turno
+        )
 
         eficiencia = (
-            botellas_reales / botellas_ideales
+            botellas_reales
+            /
+            botellas_ideales
         ) * 100
 
-        perdida_botellas = botellas_ideales - botellas_reales
+        perdida_botellas = (
+            botellas_ideales
+            -
+            botellas_reales
+        )
 
         # ========================================================
         # RESUMEN EJECUTIVO
@@ -1022,9 +1147,12 @@ if st.button("Calcular asignación óptima", type="primary"):
             unsafe_allow_html=True
         )
 
-        r1, r2, r3, r4 = st.columns(4)
+        r1, r2, r3, r4 = st.columns(
+            4
+        )
 
         with r1:
+
             metric_card(
                 "Velocidad llenadora",
                 f"{round(velocidad_llenadora, 2)}",
@@ -1033,6 +1161,7 @@ if st.button("Calcular asignación óptima", type="primary"):
             )
 
         with r2:
+
             metric_card(
                 "Producción estimada",
                 f"{round(botellas_reales, 0):,.0f}",
@@ -1041,6 +1170,7 @@ if st.button("Calcular asignación óptima", type="primary"):
             )
 
         with r3:
+
             metric_card(
                 "Eficiencia estimada",
                 f"{round(eficiencia, 2)}%",
@@ -1049,6 +1179,7 @@ if st.button("Calcular asignación óptima", type="primary"):
             )
 
         with r4:
+
             metric_card(
                 "Pérdida estimada",
                 f"{round(perdida_botellas, 0):,.0f}",
@@ -1057,6 +1188,7 @@ if st.button("Calcular asignación óptima", type="primary"):
             )
 
         if deficit_llenadora > 0:
+
             st.markdown(
                 """
                 <div class="status-bad">
@@ -1066,7 +1198,9 @@ if st.button("Calcular asignación óptima", type="primary"):
                 """,
                 unsafe_allow_html=True
             )
+
         else:
+
             st.markdown(
                 """
                 <div class="status-good">
@@ -1122,12 +1256,30 @@ if st.button("Calcular asignación óptima", type="primary"):
                     "Eficiencia estimada"
                 ],
                 "Valor": [
-                    round(velocidad_ideal_llenadora, 2),
-                    round(velocidad_llenadora, 2),
-                    round(botellas_ideales, 0),
-                    round(botellas_reales, 0),
-                    round(perdida_botellas, 0),
-                    round(eficiencia, 2)
+                    round(
+                        velocidad_ideal_llenadora,
+                        2
+                    ),
+                    round(
+                        velocidad_llenadora,
+                        2
+                    ),
+                    round(
+                        botellas_ideales,
+                        0
+                    ),
+                    round(
+                        botellas_reales,
+                        0
+                    ),
+                    round(
+                        perdida_botellas,
+                        0
+                    ),
+                    round(
+                        eficiencia,
+                        2
+                    )
                 ],
                 "Unidad": [
                     "botellas/min",
@@ -1176,10 +1328,14 @@ if st.button("Calcular asignación óptima", type="primary"):
                 )
 
                 vel_real.append(
-                    value(V_real[j])
+                    value(
+                        V_real[j]
+                    )
                 )
 
-        fig1, ax1 = plt.subplots(figsize=(12, 6))
+        fig1, ax1 = plt.subplots(
+            figsize=(12, 6)
+        )
 
         ax1.plot(
             maquinas,
@@ -1197,33 +1353,77 @@ if st.button("Calcular asignación óptima", type="primary"):
             label="Velocidad alcanzada"
         )
 
-        ax1.set_xlabel("Máquinas")
-        ax1.set_ylabel("Velocidad botellas/min")
-        ax1.set_title("Curva de velocidad ideal vs alcanzada")
-        ax1.tick_params(axis="x", rotation=45)
-        ax1.grid(True, alpha=0.3)
-        ax1.legend()
-
-        st.pyplot(fig1)
-
-        fig2, ax2 = plt.subplots(figsize=(7, 5))
-
-        ax2.bar(
-            ["Producción ideal", "Producción estimada"],
-            [botellas_ideales, botellas_reales]
+        ax1.set_xlabel(
+            "Máquinas"
         )
 
-        ax2.set_ylabel("Botellas por turno")
-        ax2.set_title("Producción ideal vs producción estimada")
-        ax2.grid(axis="y", alpha=0.3)
+        ax1.set_ylabel(
+            "Velocidad botellas/min"
+        )
 
-        st.pyplot(fig2)
+        ax1.set_title(
+            "Curva de velocidad ideal vs alcanzada"
+        )
 
-        fig3, ax3 = plt.subplots(figsize=(6, 5))
+        ax1.tick_params(
+            axis="x",
+            rotation=45
+        )
+
+        ax1.grid(
+            True,
+            alpha=0.3
+        )
+
+        ax1.legend()
+
+        st.pyplot(
+            fig1
+        )
+
+        fig2, ax2 = plt.subplots(
+            figsize=(7, 5)
+        )
+
+        ax2.bar(
+            [
+                "Producción ideal",
+                "Producción estimada"
+            ],
+            [
+                botellas_ideales,
+                botellas_reales
+            ]
+        )
+
+        ax2.set_ylabel(
+            "Botellas por turno"
+        )
+
+        ax2.set_title(
+            "Producción ideal vs producción estimada"
+        )
+
+        ax2.grid(
+            axis="y",
+            alpha=0.3
+        )
+
+        st.pyplot(
+            fig2
+        )
+
+        fig3, ax3 = plt.subplots(
+            figsize=(6, 5)
+        )
 
         ax3.bar(
-            ["Eficiencia estimada"],
-            [eficiencia]
+            [
+                "Eficiencia estimada"
+            ],
+            [
+                eficiencia
+            ]
         )
 
         ax3.axhline(
@@ -1232,13 +1432,32 @@ if st.button("Calcular asignación óptima", type="primary"):
             label="Meta ideal 100%"
         )
 
-        ax3.set_ylabel("Eficiencia (%)")
-        ax3.set_title("Eficiencia estimada de la línea")
-        ax3.set_ylim(0, max(110, eficiencia + 10))
-        ax3.grid(axis="y", alpha=0.3)
+        ax3.set_ylabel(
+            "Eficiencia (%)"
+        )
+
+        ax3.set_title(
+            "Eficiencia estimada de la línea"
+        )
+
+        ax3.set_ylim(
+            0,
+            max(
+                110,
+                eficiencia + 10
+            )
+        )
+
+        ax3.grid(
+            axis="y",
+            alpha=0.3
+        )
+
         ax3.legend()
 
-        st.pyplot(fig3)
+        st.pyplot(
+            fig3
+        )
 
         # ========================================================
         # DESCARGA
@@ -1251,7 +1470,10 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         output = BytesIO()
 
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        with pd.ExcelWriter(
+            output,
+            engine="openpyxl"
+        ) as writer:
 
             asignaciones_df.to_excel(
                 writer,
@@ -1277,15 +1499,24 @@ if st.button("Calcular asignación óptima", type="primary"):
                 index=False
             )
 
-            workers_turno[["ID_Worker", "Schedule"]].to_excel(
+            workers_turno[
+                [
+                    "ID_Worker",
+                    "Schedule"
+                ]
+            ].to_excel(
                 writer,
                 sheet_name="Operarios_Turno",
                 index=False
             )
 
-        output.seek(0)
+        output.seek(
+            0
+        )
 
-        nombre_salida = f"resultados_modelo_turno_{turno}_con_eficiencia.xlsx"
+        nombre_salida = (
+            f"resultados_modelo_turno_{turno}_con_eficiencia.xlsx"
+        )
 
         st.download_button(
             label="Descargar resultados en Excel",
@@ -1324,10 +1555,17 @@ if st.button("Calcular asignación óptima", type="primary"):
         )
 
     except Exception as e:
-        st.error("Ocurrió un error al ejecutar el modelo.")
-        st.exception(e)
+
+        st.error(
+            "Ocurrió un error al ejecutar el modelo."
+        )
+
+        st.exception(
+            e
+        )
 
 else:
+
     st.info(
         "Selecciona el turno, marca los ausentes si aplica y presiona el botón para calcular."
     )
