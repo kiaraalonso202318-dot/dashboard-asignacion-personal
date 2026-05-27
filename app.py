@@ -1,587 +1,126 @@
-import streamlit as st
+# ============================================================
+# MODELO COMPLETO DE ASIGNACIÓN DE PERSONAL
+# CON AUSENTISMO, PRIORIDAD EN LLENADORA, PRODUCCIÓN Y EFICIENCIA
+# CORREGIDO A 403 MINUTOS EFECTIVOS
+# ============================================================
+
+!pip install pulp openpyxl
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from pulp import *
-from io import BytesIO
-import unicodedata
+from google.colab import files
 
-# ============================================================
-# CONFIGURACIÓN GENERAL
-# ============================================================
 
-st.set_page_config(
-    page_title="Dashboard de Asignación de Personal",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# ============================================================
-# PARÁMETROS TÉCNICOS OCULTOS
-# ============================================================
-
-ID_LLENADORA = "9"
-epsilon = 0.0001
-lambda_pen = 100
-peso_deficit_llenadora = 10000
-peso_desviacion_otras = 1
-habilidad_minima = 1
-
-# ============================================================
-# ESTILO VISUAL
-# ============================================================
-
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background: linear-gradient(135deg, #f2fbf6 0%, #eef8f2 45%, #f7fafc 100%);
-    }
-
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 3rem;
-        max-width: 1280px;
-    }
-
-    .hero {
-        background: linear-gradient(135deg, #064e3b 0%, #0f766e 48%, #16a34a 100%);
-        padding: 2.3rem 2.5rem;
-        border-radius: 28px;
-        color: white;
-        margin-bottom: 1.4rem;
-        box-shadow: 0 20px 45px rgba(6, 78, 59, 0.22);
-    }
-
-    .hero h1 {
-        font-size: 2.45rem;
-        margin-bottom: 0.55rem;
-        font-weight: 900;
-        letter-spacing: -0.035em;
-    }
-
-    .hero p {
-        font-size: 1.05rem;
-        line-height: 1.6;
-        opacity: 0.96;
-        margin: 0;
-        max-width: 970px;
-    }
-
-    .privacy-box {
-        background: linear-gradient(135deg, #dcfce7 0%, #ecfdf5 100%);
-        border: 1px solid #86efac;
-        color: #14532d;
-        padding: 1rem 1.2rem;
-        border-radius: 20px;
-        margin-bottom: 1.4rem;
-        font-weight: 600;
-        box-shadow: 0 6px 18px rgba(22, 163, 74, 0.08);
-    }
-
-    .section-title {
-        font-size: 1.45rem;
-        font-weight: 850;
-        margin-top: 1.6rem;
-        margin-bottom: 0.85rem;
-        color: #064e3b;
-        letter-spacing: -0.01em;
-    }
-
-    .card {
-        background: rgba(255, 255, 255, 0.94);
-        border-radius: 24px;
-        padding: 1.3rem;
-        border: 1px solid #d9f2e3;
-        box-shadow: 0 10px 28px rgba(6, 78, 59, 0.07);
-        margin-bottom: 1rem;
-    }
-
-    .metric-card {
-        background: white;
-        border-radius: 24px;
-        padding: 1.25rem 1.3rem;
-        border: 1px solid #d9f2e3;
-        box-shadow: 0 10px 26px rgba(6, 78, 59, 0.08);
-        min-height: 130px;
-    }
-
-    .metric-label {
-        font-size: 0.86rem;
-        font-weight: 800;
-        color: #407060;
-        margin-bottom: 0.45rem;
-    }
-
-    .metric-value {
-        font-size: 2.08rem;
-        font-weight: 900;
-        color: #052e26;
-        margin-bottom: 0.25rem;
-    }
-
-    .metric-foot {
-        font-size: 0.84rem;
-        color: #64756d;
-    }
-
-    .green {
-        border-left: 8px solid #16a34a;
-    }
-
-    .darkgreen {
-        border-left: 8px solid #064e3b;
-    }
-
-    .mint {
-        border-left: 8px solid #34d399;
-    }
-
-    .teal {
-        border-left: 8px solid #0f766e;
-    }
-
-    .lime {
-        border-left: 8px solid #84cc16;
-    }
-
-    .orange {
-        border-left: 8px solid #f59e0b;
-    }
-
-    .id-chip {
-        display: inline-block;
-        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-        color: #064e3b;
-        border: 1px solid #86efac;
-        padding: 0.48rem 0.82rem;
-        border-radius: 999px;
-        margin: 0.25rem;
-        font-weight: 800;
-        font-size: 0.95rem;
-        box-shadow: 0 4px 10px rgba(22, 163, 74, 0.12);
-    }
-
-    .status-good {
-        background: linear-gradient(135deg, #dcfce7 0%, #ecfdf5 100%);
-        color: #14532d;
-        border: 1px solid #86efac;
-        padding: 1rem;
-        border-radius: 20px;
-        font-weight: 750;
-        box-shadow: 0 6px 18px rgba(22, 163, 74, 0.10);
-    }
-
-    .soft-note {
-        background: #f0fdf4;
-        color: #166534;
-        border: 1px solid #bbf7d0;
-        padding: 1rem;
-        border-radius: 20px;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-
-    div[data-testid="stFileUploader"] section {
-        border-radius: 20px;
-        border: 1px dashed #86efac;
-        background: #ffffff;
-    }
-
-    .stButton > button {
-        background: linear-gradient(135deg, #064e3b 0%, #16a34a 100%);
-        color: white;
-        border: none;
-        border-radius: 16px;
-        padding: 0.78rem 1.35rem;
-        font-weight: 850;
-        box-shadow: 0 10px 22px rgba(22, 163, 74, 0.24);
-    }
-
-    .stDownloadButton > button {
-        background: linear-gradient(135deg, #0f766e 0%, #22c55e 100%);
-        color: white;
-        border: none;
-        border-radius: 16px;
-        padding: 0.78rem 1.35rem;
-        font-weight: 850;
-        box-shadow: 0 10px 22px rgba(15, 118, 110, 0.22);
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# ============================================================
-# FUNCIONES AUXILIARES
-# ============================================================
-
-def metric_card(label, value, foot="", style_class="green"):
-    st.markdown(
-        f"""
-        <div class="metric-card {style_class}">
-            <div class="metric-label">{label}</div>
-            <div class="metric-value">{value}</div>
-            <div class="metric-foot">{foot}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-def id_chips(ids):
-    if len(ids) == 0:
-        st.warning("No hay operarios para mostrar.")
-        return
-
-    chips = "".join(
-        [f'<span class="id-chip">ID {str(i)}</span>' for i in ids]
-    )
-
-    st.markdown(chips, unsafe_allow_html=True)
-
-
-def limpiar_texto(texto):
-    texto = str(texto).strip().lower()
-    texto = unicodedata.normalize("NFKD", texto)
-    texto = "".join([c for c in texto if not unicodedata.combining(c)])
-    texto = texto.replace(" ", "")
-    texto = texto.replace("_", "")
-    texto = texto.replace("-", "")
-    return texto
-
-
-def obtener_columnas_tareas(df):
-    columnas_no_tareas = [
-        "ID_Worker",
-        "Name",
-        "Nombre",
-        "Position",
-        "Schedule",
-        "Turno"
-    ]
-
-    columnas_tareas = [
-        col for col in df.columns
-        if str(col).strip() not in columnas_no_tareas
-    ]
-
-    return columnas_tareas
-
-
-def construir_matriz(df):
-    columnas_tareas = obtener_columnas_tareas(df)
-
-    matriz = {}
-
-    for _, row in df.iterrows():
-
-        worker = str(row["ID_Worker"]).strip()
-
-        matriz[worker] = {}
-
-        for tarea in columnas_tareas:
-
-            valor = row[tarea]
-
-            if pd.isna(valor):
-                valor = 0
-
-            matriz[worker][str(tarea).strip()] = float(valor)
-
-    return matriz, columnas_tareas
-
-
-def mostrar_tabla(df):
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True
-    )
-
-
-def ordenar_maquinas(df):
-    orden_deseado = {
-        "descapsulador": 1,
-        "descapsuladora": 1,
-        "lavadora": 2,
-        "llenadora": 3,
-        "etiquetadora": 4,
-        "empacadora": 5,
-        "paletizadora": 6
-    }
-
-    df = df.copy()
-
-    df["Orden_Maquina"] = df["Maquina"].apply(
-        lambda x: orden_deseado.get(
-            limpiar_texto(x),
-            999
-        )
-    )
-
-    df = df.sort_values(
-        ["Orden_Maquina", "ID_Task"]
-    ).drop(
-        columns=["Orden_Maquina"]
-    )
-
-    return df
-
-
-# ============================================================
-# ENCABEZADO
-# ============================================================
-
-st.markdown(
-    """
-    <div class="hero">
-        <h1>Dashboard de Asignación Óptima de Personal</h1>
-        <p>
-        Herramienta interactiva para apoyar la asignación de operarios por turno,
-        considerando ausentismo, habilidades, velocidades relativas, prioridad de la llenadora,
-        producción estimada y eficiencia de la línea.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    """
-    <div class="privacy-box">
-        Por confidencialidad, el dashboard trabaja únicamente con el ID del operario.
-        No se muestran nombres del personal en pantalla ni en el archivo de resultados.
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-# ============================================================
+# =========================================================
 # 1. CARGAR ARCHIVO
-# ============================================================
+# =========================================================
 
-st.markdown(
-    '<div class="section-title">1. Cargar archivo Excel</div>',
-    unsafe_allow_html=True
-)
+print("Sube el archivo Excel")
 
-archivo = st.file_uploader(
-    "Sube el archivo Excel del modelo",
-    type=["xlsx"]
-)
+uploaded = files.upload()
 
-if archivo is None:
-    st.info("Sube el archivo Excel para iniciar el análisis.")
-    st.stop()
+archivo = list(uploaded.keys())[0]
 
-# ============================================================
+
+# =========================================================
 # 2. LEER HOJAS
-# ============================================================
+# =========================================================
 
-try:
-    tasks_df = pd.read_excel(
-        archivo,
-        sheet_name="Tasks"
-    )
-
-    archivo.seek(0)
-
-    rel_speed_df = pd.read_excel(
-        archivo,
-        sheet_name="Rel_Speed"
-    )
-
-    archivo.seek(0)
-
-    workers_df = pd.read_excel(
-        archivo,
-        sheet_name="Workers"
-    )
-
-    archivo.seek(0)
-
-    abilities_df = pd.read_excel(
-        archivo,
-        sheet_name="Abilities"
-    )
-
-    archivo.seek(0)
-
-    speed_df = pd.read_excel(
-        archivo,
-        sheet_name="Speed_Factor"
-    )
-
-except Exception as e:
-    st.error(
-        "No se pudo leer el archivo Excel. Revisa que tenga las hojas: "
-        "Tasks, Rel_Speed, Workers, Abilities y Speed_Factor."
-    )
-    st.exception(e)
-    st.stop()
-
-st.success("Archivo cargado correctamente.")
-
-# ============================================================
-# 3. LIMPIEZA DE TIPOS
-# ============================================================
-
-try:
-    tasks_df["ID_Task"] = tasks_df["ID_Task"].astype(str).str.strip()
-    rel_speed_df["ID_Task"] = rel_speed_df["ID_Task"].astype(str).str.strip()
-
-    workers_df["ID_Worker"] = workers_df["ID_Worker"].astype(str).str.strip()
-    abilities_df["ID_Worker"] = abilities_df["ID_Worker"].astype(str).str.strip()
-    speed_df["ID_Worker"] = speed_df["ID_Worker"].astype(str).str.strip()
-
-    workers_df["Schedule"] = workers_df["Schedule"].astype(str).str.strip()
-
-    tasks_df["Task"] = tasks_df["Task"].astype(str).str.strip()
-    rel_speed_df["Machine"] = rel_speed_df["Machine"].astype(str).str.strip()
-
-    abilities_df.columns = [
-        str(col).strip()
-        for col in abilities_df.columns
-    ]
-
-    speed_df.columns = [
-        str(col).strip()
-        for col in speed_df.columns
-    ]
-
-except Exception as e:
-    st.error("Hay un problema con los nombres de columnas del Excel.")
-    st.exception(e)
-    st.stop()
-
-# ============================================================
-# 4. REVISAR DATOS CARGADOS
-# ============================================================
-
-st.markdown(
-    '<div class="section-title">2. Revisar datos cargados</div>',
-    unsafe_allow_html=True
+tasks_df = pd.read_excel(
+    archivo,
+    sheet_name='Tasks'
 )
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    [
-        "Tareas",
-        "Velocidades",
-        "Operarios",
-        "Habilidades",
-        "Factores de velocidad"
-    ]
+rel_speed_df = pd.read_excel(
+    archivo,
+    sheet_name='Rel_Speed'
 )
 
-with tab1:
-    mostrar_tabla(tasks_df)
-
-with tab2:
-    mostrar_tabla(rel_speed_df)
-
-with tab3:
-    columnas_workers = [
-        col for col in ["ID_Worker", "Schedule"]
-        if col in workers_df.columns
-    ]
-
-    mostrar_tabla(workers_df[columnas_workers])
-
-with tab4:
-    mostrar_tabla(abilities_df)
-
-with tab5:
-    mostrar_tabla(speed_df)
-
-# ============================================================
-# 5. CONFIGURACIÓN OPERATIVA
-# ============================================================
-
-st.markdown(
-    '<div class="section-title">3. Configuración operativa</div>',
-    unsafe_allow_html=True
+workers_df = pd.read_excel(
+    archivo,
+    sheet_name='Workers'
 )
 
-col_conf1, col_conf2, col_conf3 = st.columns(
-    [1.2, 1, 1]
+abilities_df = pd.read_excel(
+    archivo,
+    sheet_name='Abilities'
 )
 
-with col_conf1:
-    turnos_disponibles = sorted(
-        workers_df["Schedule"].dropna().unique().tolist()
-    )
+speed_df = pd.read_excel(
+    archivo,
+    sheet_name='Speed_Factor'
+)
 
-    turno = st.selectbox(
-        "Selecciona el turno",
-        turnos_disponibles
-    )
 
-with col_conf2:
-    max_tareas_por_trabajador = st.number_input(
-        "Máximo de tareas por operario",
-        min_value=1,
-        max_value=10,
-        value=2,
-        step=1
-    )
+# =========================================================
+# 3. CORREGIR TIPOS
+# =========================================================
 
-with col_conf3:
-    minutos_turno = st.number_input(
-        "Minutos del turno",
-        min_value=1,
-        value=480,
-        step=1
-    )
+tasks_df['ID_Task'] = tasks_df['ID_Task'].astype(str)
+rel_speed_df['ID_Task'] = rel_speed_df['ID_Task'].astype(str)
+
+workers_df['ID_Worker'] = workers_df['ID_Worker'].astype(str)
+abilities_df['ID_Worker'] = abilities_df['ID_Worker'].astype(str)
+speed_df['ID_Worker'] = speed_df['ID_Worker'].astype(str)
+
+workers_df['Schedule'] = workers_df['Schedule'].astype(str)
+
+tasks_df['Task'] = tasks_df['Task'].astype(str).str.strip()
+rel_speed_df['Machine'] = rel_speed_df['Machine'].astype(str).str.strip()
+workers_df['Name'] = workers_df['Name'].astype(str).str.strip()
+
+
+# =========================================================
+# 4. SELECCIÓN TURNO
+# =========================================================
+
+print("\nTURNOS DISPONIBLES:")
+print(workers_df['Schedule'].unique())
+
+turno = input(
+    "\nIngrese turno (0, 2, 3): "
+).strip()
+
+
+# =========================================================
+# 5. FILTRAR TRABAJADORES DEL TURNO
+# =========================================================
 
 workers_turno = workers_df[
-    workers_df["Schedule"] == str(turno)
+    workers_df['Schedule'] == str(turno)
 ].copy()
 
-if len(workers_turno) == 0:
-    st.error("No hay operarios programados para este turno.")
-    st.stop()
+print("\nTRABAJADORES PROGRAMADOS:\n")
 
-st.markdown(
-    '<div class="section-title">4. Operarios del turno</div>',
-    unsafe_allow_html=True
+display(
+    workers_turno[
+        ['ID_Worker', 'Name']
+    ]
 )
 
-st.markdown(
-    '<div class="card">',
-    unsafe_allow_html=True
-)
 
-st.write("Operarios programados en el turno seleccionado:")
-
-mostrar_tabla(
-    workers_turno[["ID_Worker", "Schedule"]]
-)
-
-st.markdown(
-    '</div>',
-    unsafe_allow_html=True
-)
-
-# ============================================================
+# =========================================================
 # 6. AUSENTISMO
-# ============================================================
+# =========================================================
 
-st.markdown(
-    '<div class="section-title">5. Seleccionar ausentes</div>',
-    unsafe_allow_html=True
+ausentes = input(
+    "\nIngrese IDs ausentes separados por coma. Si no faltó nadie, presione Enter: "
 )
 
-opciones_ausentes = sorted(
-    workers_turno["ID_Worker"].dropna().astype(str).tolist()
-)
+ausentes = [
+    x.strip()
+    for x in ausentes.split(',')
+    if x.strip() != ''
+]
 
-ausentes = st.multiselect(
-    "Selecciona los ID de los operarios ausentes. Si no faltó nadie, deja vacío.",
-    opciones_ausentes
-)
+
+# =========================================================
+# 7. TRABAJADORES PRESENTES
+# =========================================================
 
 trabajadores = list(
-    workers_turno["ID_Worker"]
+    workers_turno['ID_Worker']
 )
 
 presentes = [
@@ -589,984 +128,885 @@ presentes = [
     if i not in ausentes
 ]
 
-m1, m2, m3 = st.columns(3)
-
-with m1:
-    metric_card(
-        "Operarios programados",
-        len(trabajadores),
-        "Total en el turno seleccionado",
-        "teal"
-    )
-
-with m2:
-    metric_card(
-        "Operarios ausentes",
-        len(ausentes),
-        "IDs marcados como no disponibles",
-        "orange"
-    )
-
-with m3:
-    metric_card(
-        "Operarios presentes",
-        len(presentes),
-        "Personal disponible para asignar",
-        "green"
-    )
-
-st.markdown(
-    '<div class="card">',
-    unsafe_allow_html=True
-)
-
-st.write("ID de operarios presentes:")
-
-id_chips(presentes)
-
-st.markdown(
-    '</div>',
-    unsafe_allow_html=True
-)
+print("\nTRABAJADORES PRESENTES:\n")
+print(presentes)
 
 if len(presentes) == 0:
-    st.error("No hay operarios presentes. No se puede resolver el modelo.")
-    st.stop()
+    raise ValueError("No hay trabajadores presentes. No se puede resolver el modelo.")
 
-# ============================================================
-# 7. EJECUTAR MODELO
-# ============================================================
 
-st.markdown(
-    '<div class="section-title">6. Ejecutar optimización</div>',
-    unsafe_allow_html=True
+# =========================================================
+# 8. CONJUNTOS
+# =========================================================
+
+tareas = list(
+    tasks_df['ID_Task']
 )
 
-if st.button(
-    "Calcular asignación óptima",
-    type="primary"
-):
 
-    try:
-        # ========================================================
-        # CONJUNTOS Y PARÁMETROS
-        # ========================================================
+# =========================================================
+# 9. PARÁMETROS DEL EXCEL
+# =========================================================
 
-        tareas = list(
-            tasks_df["ID_Task"]
+# m_j = 1 si la tarea necesita máquina, 0 si no necesita máquina
+m = dict(
+    zip(
+        tasks_df['ID_Task'],
+        tasks_df['Need_Mac']
+    )
+)
+
+# Nombre de cada tarea
+nombre_tarea = dict(
+    zip(
+        tasks_df['ID_Task'],
+        tasks_df['Task']
+    )
+)
+
+# ID de tarea a partir del nombre de tarea
+taskname_to_id = dict(
+    zip(
+        tasks_df['Task'],
+        tasks_df['ID_Task']
+    )
+)
+
+# Velocidad nominal de cada máquina
+V_std = dict(
+    zip(
+        rel_speed_df['ID_Task'],
+        rel_speed_df['Nominal_Sp']
+    )
+)
+
+# Nombre de máquina asociada
+machine_name = dict(
+    zip(
+        rel_speed_df['ID_Task'],
+        rel_speed_df['Machine']
+    )
+)
+
+
+# =========================================================
+# 10. MATRIZ DE HABILIDADES
+# =========================================================
+
+H = {}
+
+for _, row in abilities_df.iterrows():
+
+    worker = row['ID_Worker']
+
+    H[worker] = {}
+
+    for tarea in abilities_df.columns[2:]:
+
+        H[worker][tarea] = row[tarea]
+
+
+# =========================================================
+# 11. MATRIZ SPEED FACTOR
+# =========================================================
+
+F = {}
+
+for _, row in speed_df.iterrows():
+
+    worker = row['ID_Worker']
+
+    F[worker] = {}
+
+    for tarea in speed_df.columns[2:]:
+
+        F[worker][tarea] = row[tarea]
+
+
+# =========================================================
+# 12. IDENTIFICAR LLENADORA
+# =========================================================
+
+# Según el archivo que vienen usando, la llenadora es ID_Task = '9'.
+# Si en otro archivo cambia, modifica este valor.
+ID_LLENADORA = '9'
+
+if ID_LLENADORA not in tareas:
+    raise ValueError(
+        "El ID de llenadora definido no existe en las tareas. "
+        "Revisa ID_LLENADORA."
+    )
+
+print("\n======================")
+print("LLENADORA IDENTIFICADA")
+print("======================")
+
+print("ID llenadora:", ID_LLENADORA)
+print("Tarea:", nombre_tarea[ID_LLENADORA])
+print("Máquina:", machine_name[ID_LLENADORA])
+print("Velocidad estándar:", V_std[ID_LLENADORA], "botellas/min")
+
+
+# =========================================================
+# 13. TABLA DE CANDIDATOS PARA LA LLENADORA
+# =========================================================
+
+candidatos_llenadora = []
+
+nombre_llenadora = nombre_tarea[ID_LLENADORA]
+
+for i in presentes:
+
+    velocidad_estimada = V_std[ID_LLENADORA] * F[i][nombre_llenadora]
+
+    deficit_candidato = max(
+        V_std[ID_LLENADORA] - velocidad_estimada,
+        0
+    )
+
+    exceso_candidato = max(
+        velocidad_estimada - V_std[ID_LLENADORA],
+        0
+    )
+
+    nombre_operario = workers_df[
+        workers_df['ID_Worker'] == i
+    ]['Name'].values[0]
+
+    candidatos_llenadora.append([
+        i,
+        nombre_operario,
+        H[i][nombre_llenadora],
+        F[i][nombre_llenadora],
+        velocidad_estimada,
+        deficit_candidato,
+        exceso_candidato
+    ])
+
+candidatos_llenadora_df = pd.DataFrame(
+    candidatos_llenadora,
+    columns=[
+        'ID_Worker',
+        'Trabajador',
+        'Habilidad_Llenadora',
+        'Speed_Factor_Llenadora',
+        'Velocidad_Estimada_Llenadora',
+        'Deficit_vs_Estandar',
+        'Exceso_vs_Estandar'
+    ]
+)
+
+candidatos_llenadora_df = candidatos_llenadora_df.sort_values(
+    by=[
+        'Deficit_vs_Estandar',
+        'Velocidad_Estimada_Llenadora',
+        'Habilidad_Llenadora'
+    ],
+    ascending=[
+        True,
+        False,
+        False
+    ]
+)
+
+print("\n======================")
+print("CANDIDATOS PARA LLENADORA")
+print("======================")
+
+display(candidatos_llenadora_df)
+
+
+# =========================================================
+# 14. CREAR MODELO
+# =========================================================
+
+modelo = LpProblem(
+    "Asignacion_Optima_Con_Eficiencia",
+    LpMinimize
+)
+
+
+# =========================================================
+# 15. VARIABLES
+# =========================================================
+
+# x_ij = 1 si trabajador i se asigna a tarea j
+x = LpVariable.dicts(
+    "x",
+    [(i, j) for i in presentes for j in tareas],
+    cat='Binary'
+)
+
+# Velocidad real alcanzada en cada tarea
+V_real = LpVariable.dicts(
+    "V_real",
+    tareas,
+    lowBound=0
+)
+
+# Desviación absoluta general
+d = LpVariable.dicts(
+    "d",
+    tareas,
+    lowBound=0
+)
+
+# Déficit: solo mide cuando una máquina queda por debajo
+deficit = LpVariable.dicts(
+    "deficit",
+    tareas,
+    lowBound=0
+)
+
+# Exceso: mide cuando una máquina queda por encima
+exceso = LpVariable.dicts(
+    "exceso",
+    tareas,
+    lowBound=0
+)
+
+# y_i = 1 si trabajador i cubre más de una tarea
+y = LpVariable.dicts(
+    "y",
+    presentes,
+    cat='Binary'
+)
+
+
+# =========================================================
+# 16. PARÁMETROS DEL MODELO
+# =========================================================
+
+# Premio pequeño por habilidad
+epsilon = 0.0001
+
+# Penalización por doble asignación
+lambda_pen = 100
+
+# Penalización muy alta si la llenadora queda por debajo
+# Este valor hace que el modelo proteja la producción.
+peso_deficit_llenadora = 10000
+
+# Penalización normal para desviaciones de otras máquinas
+peso_desviacion_otras = 1
+
+# Habilidad mínima para asignar.
+# Si quieres permitir todas las asignaciones, pon 0.
+habilidad_minima = 0
+
+# Máximo de tareas por trabajador
+max_tareas_por_trabajador = 2
+
+# Minutos efectivos de operación del turno
+# CORRECCIÓN: antes se usaban 480 minutos.
+# Ahora se usan 403 minutos efectivos.
+MINUTOS_EFECTIVOS_TURNO = 403
+
+
+# =========================================================
+# 17. FUNCIÓN OBJETIVO CORREGIDA
+# =========================================================
+
+# Para la llenadora:
+# Se penaliza fuertemente SOLO si queda por debajo.
+penalizacion_llenadora = (
+    peso_deficit_llenadora * deficit[ID_LLENADORA]
+)
+
+# Para las demás máquinas:
+# Se minimiza la desviación absoluta normal.
+penalizacion_otras_maquinas = lpSum(
+    peso_desviacion_otras * d[j]
+    for j in tareas
+    if m[j] == 1 and j != ID_LLENADORA
+)
+
+# Penalización por doble asignación
+penalizacion_doble = lambda_pen * lpSum(
+    y[i]
+    for i in presentes
+)
+
+# Premio por habilidad
+premio_habilidad = epsilon * lpSum(
+    H[i][nombre_tarea[j]] * x[(i, j)]
+    for i in presentes
+    for j in tareas
+)
+
+modelo += (
+    penalizacion_llenadora
+    + penalizacion_otras_maquinas
+    + penalizacion_doble
+    - premio_habilidad
+)
+
+
+# =========================================================
+# 18. RESTRICCIONES
+# =========================================================
+
+# ---------------------------------------------------------
+# Cada tarea debe cubrirse exactamente por un trabajador
+# ---------------------------------------------------------
+
+for j in tareas:
+
+    modelo += (
+        lpSum(
+            x[(i, j)]
+            for i in presentes
+        ) == 1
+    )
+
+
+# ---------------------------------------------------------
+# Doble asignación
+# Si un trabajador tiene más de una tarea, y_i se activa
+# ---------------------------------------------------------
+
+for i in presentes:
+
+    modelo += (
+        lpSum(
+            x[(i, j)]
+            for j in tareas
         )
+        <=
+        1 + y[i]
+    )
 
-        m = dict(
-            zip(
-                tasks_df["ID_Task"],
-                tasks_df["Need_Mac"]
+
+# ---------------------------------------------------------
+# Máximo de tareas por trabajador
+# ---------------------------------------------------------
+
+for i in presentes:
+
+    modelo += (
+        lpSum(
+            x[(i, j)]
+            for j in tareas
+        )
+        <=
+        max_tareas_por_trabajador
+    )
+
+
+# ---------------------------------------------------------
+# No asignar trabajador si no tiene habilidad suficiente
+# ---------------------------------------------------------
+
+for i in presentes:
+
+    for j in tareas:
+
+        nombre = nombre_tarea[j]
+
+        if H[i][nombre] < habilidad_minima:
+
+            modelo += (
+                x[(i, j)] == 0
             )
-        )
 
-        nombre_tarea = dict(
-            zip(
-                tasks_df["ID_Task"],
-                tasks_df["Task"]
-            )
-        )
 
-        V_std = dict(
-            zip(
-                rel_speed_df["ID_Task"],
-                rel_speed_df["Nominal_Sp"]
-            )
-        )
+# ---------------------------------------------------------
+# Velocidad real
+# ---------------------------------------------------------
 
-        machine_name = dict(
-            zip(
-                rel_speed_df["ID_Task"],
-                rel_speed_df["Machine"]
-            )
-        )
+for j in tareas:
 
-        if ID_LLENADORA not in tareas:
-            st.error(
-                f"El ID de llenadora definido ({ID_LLENADORA}) no existe en las tareas."
-            )
-            st.stop()
+    if m[j] == 1:
 
-        # ========================================================
-        # MATRICES
-        # ========================================================
+        nombre = nombre_tarea[j]
 
-        H, columnas_habilidades = construir_matriz(
-            abilities_df
-        )
-
-        F, columnas_speed = construir_matriz(
-            speed_df
-        )
-
-        # ========================================================
-        # VALIDACIONES
-        # ========================================================
-
-        errores = []
-
-        for i in presentes:
-
-            if i not in H:
-                errores.append(
-                    f"El operario con ID {i} no aparece en Abilities."
-                )
-
-            if i not in F:
-                errores.append(
-                    f"El operario con ID {i} no aparece en Speed_Factor."
-                )
-
-        tareas_faltantes_abilities = []
-        tareas_faltantes_speed = []
-
-        for j in tareas:
-
-            nombre = nombre_tarea[j]
-
-            if nombre not in columnas_habilidades:
-                tareas_faltantes_abilities.append(nombre)
-
-            if nombre not in columnas_speed:
-                tareas_faltantes_speed.append(nombre)
-
-        if len(tareas_faltantes_abilities) > 0:
-            errores.append(
-                "Estas tareas no aparecen como columnas en Abilities: "
-                + ", ".join(sorted(set(tareas_faltantes_abilities)))
-            )
-
-        if len(tareas_faltantes_speed) > 0:
-            errores.append(
-                "Estas tareas no aparecen como columnas en Speed_Factor: "
-                + ", ".join(sorted(set(tareas_faltantes_speed)))
-            )
-
-        if len(errores) > 0:
-            st.error("Hay errores en la estructura del archivo.")
-            for error in errores:
-                st.write(error)
-            st.stop()
-
-        # ========================================================
-        # CANDIDATOS PARA LLENADORA
-        # ========================================================
-
-        candidatos_llenadora = []
-
-        nombre_llenadora = nombre_tarea[
-            ID_LLENADORA
-        ]
-
-        for i in presentes:
-
-            velocidad_estimada = (
-                V_std[ID_LLENADORA]
-                *
-                F[i][nombre_llenadora]
-            )
-
-            deficit_candidato = max(
-                V_std[ID_LLENADORA] - velocidad_estimada,
-                0
-            )
-
-            exceso_candidato = max(
-                velocidad_estimada - V_std[ID_LLENADORA],
-                0
-            )
-
-            candidatos_llenadora.append(
-                [
-                    i,
-                    H[i][nombre_llenadora],
-                    F[i][nombre_llenadora],
-                    velocidad_estimada,
-                    deficit_candidato,
-                    exceso_candidato
-                ]
-            )
-
-        candidatos_llenadora_df = pd.DataFrame(
-            candidatos_llenadora,
-            columns=[
-                "ID_Worker",
-                "Habilidad_Llenadora",
-                "Speed_Factor_Llenadora",
-                "Velocidad_Estimada_Llenadora",
-                "Deficit_vs_Estandar",
-                "Exceso_vs_Estandar"
-            ]
-        )
-
-        candidatos_llenadora_df = candidatos_llenadora_df.sort_values(
-            by=[
-                "Deficit_vs_Estandar",
-                "Velocidad_Estimada_Llenadora",
-                "Habilidad_Llenadora"
-            ],
-            ascending=[
-                True,
-                False,
-                False
-            ]
-        )
-
-        # ========================================================
-        # CREAR MODELO
-        # ========================================================
-
-        modelo = LpProblem(
-            "Asignacion_Optima_Con_Eficiencia",
-            LpMinimize
-        )
-
-        x = LpVariable.dicts(
-            "x",
-            [(i, j) for i in presentes for j in tareas],
-            cat="Binary"
-        )
-
-        V_real = LpVariable.dicts(
-            "V_real",
-            tareas,
-            lowBound=0
-        )
-
-        d = LpVariable.dicts(
-            "d",
-            tareas,
-            lowBound=0
-        )
-
-        deficit = LpVariable.dicts(
-            "deficit",
-            tareas,
-            lowBound=0
-        )
-
-        exceso = LpVariable.dicts(
-            "exceso",
-            tareas,
-            lowBound=0
-        )
-
-        y = LpVariable.dicts(
-            "y",
-            presentes,
-            cat="Binary"
-        )
-
-        # ========================================================
-        # FUNCIÓN OBJETIVO
-        # ========================================================
-
-        penalizacion_llenadora = (
-            peso_deficit_llenadora
+        modelo += (
+            V_real[j]
+            ==
+            V_std[j]
             *
-            deficit[ID_LLENADORA]
+            lpSum(
+                F[i][nombre] * x[(i, j)]
+                for i in presentes
+            )
         )
 
-        penalizacion_otras_maquinas = lpSum(
-            peso_desviacion_otras * d[j]
-            for j in tareas
-            if m[j] == 1 and j != ID_LLENADORA
+    else:
+
+        modelo += (
+            V_real[j] == 0
         )
 
-        penalizacion_doble = lambda_pen * lpSum(
-            y[i]
-            for i in presentes
-        )
 
-        premio_habilidad = epsilon * lpSum(
-            H[i][nombre_tarea[j]] * x[(i, j)]
-            for i in presentes
-            for j in tareas
+# ---------------------------------------------------------
+# Desviación absoluta, déficit y exceso
+# ---------------------------------------------------------
+
+for j in tareas:
+
+    if m[j] == 1:
+
+        # Desviación absoluta
+        modelo += (
+            d[j]
+            >=
+            V_real[j] - V_std[j]
         )
 
         modelo += (
-            penalizacion_llenadora
-            + penalizacion_otras_maquinas
-            + penalizacion_doble
-            - premio_habilidad
+            d[j]
+            >=
+            V_std[j] - V_real[j]
         )
 
-        # ========================================================
-        # RESTRICCIONES
-        # ========================================================
+        # Déficit por debajo
+        modelo += (
+            deficit[j]
+            >=
+            V_std[j] - V_real[j]
+        )
 
-        for j in tareas:
-            modelo += (
-                lpSum(
-                    x[(i, j)]
-                    for i in presentes
-                ) == 1
+        # Exceso por encima
+        modelo += (
+            exceso[j]
+            >=
+            V_real[j] - V_std[j]
+        )
+
+    else:
+
+        modelo += (
+            d[j] == 0
+        )
+
+        modelo += (
+            deficit[j] == 0
+        )
+
+        modelo += (
+            exceso[j] == 0
+        )
+
+
+# =========================================================
+# 19. RESOLVER
+# =========================================================
+
+modelo.solve()
+
+
+# =========================================================
+# 20. ESTADO
+# =========================================================
+
+print("\n======================")
+print("ESTADO")
+print("======================")
+
+print(
+    LpStatus[modelo.status]
+)
+
+if LpStatus[modelo.status] != "Optimal":
+    print("\nEl modelo no encontró solución óptima.")
+    print("Revisa si hay suficientes trabajadores presentes o si las restricciones son muy fuertes.")
+
+
+# =========================================================
+# 21. ASIGNACIONES
+# =========================================================
+
+print("\n======================")
+print("ASIGNACIONES")
+print("======================")
+
+asignaciones = []
+
+for i in presentes:
+
+    tareas_asig = []
+
+    for j in tareas:
+
+        if value(x[(i, j)]) == 1:
+
+            tareas_asig.append(
+                nombre_tarea[j]
             )
 
-        for i in presentes:
-            modelo += (
-                lpSum(
-                    x[(i, j)]
-                    for j in tareas
-                )
-                <=
-                1 + y[i]
+    if len(tareas_asig) > 0:
+
+        nombre_operario = workers_df[
+            workers_df['ID_Worker'] == i
+        ]['Name'].values[0]
+
+        asignaciones.append([
+            i,
+            nombre_operario,
+            ", ".join(tareas_asig)
+        ])
+
+asignaciones_df = pd.DataFrame(
+    asignaciones,
+    columns=[
+        'ID_Worker',
+        'Trabajador',
+        'Tareas Asignadas'
+    ]
+)
+
+display(asignaciones_df)
+
+
+# =========================================================
+# 22. DESVIACIONES
+# =========================================================
+
+desviaciones = []
+
+for j in tareas:
+
+    if m[j] == 1:
+
+        desviaciones.append([
+
+            j,
+
+            nombre_tarea[j],
+
+            machine_name[j],
+
+            round(
+                V_std[j],
+                2
+            ),
+
+            round(
+                value(V_real[j]),
+                2
+            ),
+
+            round(
+                value(d[j]),
+                2
+            ),
+
+            round(
+                value(deficit[j]),
+                2
+            ),
+
+            round(
+                value(exceso[j]),
+                2
             )
 
-        for i in presentes:
-            modelo += (
-                lpSum(
-                    x[(i, j)]
-                    for j in tareas
-                )
-                <=
-                max_tareas_por_trabajador
-            )
-
-        for i in presentes:
-
-            for j in tareas:
-
-                nombre = nombre_tarea[j]
-
-                if H[i][nombre] < habilidad_minima:
-
-                    modelo += (
-                        x[(i, j)] == 0
-                    )
-
-        for j in tareas:
-
-            if m[j] == 1:
-
-                nombre = nombre_tarea[j]
-
-                modelo += (
-                    V_real[j]
-                    ==
-                    V_std[j]
-                    *
-                    lpSum(
-                        F[i][nombre] * x[(i, j)]
-                        for i in presentes
-                    )
-                )
-
-            else:
-
-                modelo += (
-                    V_real[j] == 0
-                )
-
-        for j in tareas:
-
-            if m[j] == 1:
-
-                modelo += (
-                    d[j]
-                    >=
-                    V_real[j] - V_std[j]
-                )
-
-                modelo += (
-                    d[j]
-                    >=
-                    V_std[j] - V_real[j]
-                )
-
-                modelo += (
-                    deficit[j]
-                    >=
-                    V_std[j] - V_real[j]
-                )
-
-                modelo += (
-                    exceso[j]
-                    >=
-                    V_real[j] - V_std[j]
-                )
-
-            else:
-
-                modelo += (
-                    d[j] == 0
-                )
-
-                modelo += (
-                    deficit[j] == 0
-                )
-
-                modelo += (
-                    exceso[j] == 0
-                )
-
-        # ========================================================
-        # RESOLVER
-        # ========================================================
-
-        solver = PULP_CBC_CMD(
-            msg=False
-        )
-
-        modelo.solve(
-            solver
-        )
-
-        estado = LpStatus[
-            modelo.status
-        ]
-
-        st.markdown(
-            '<div class="section-title">7. Estado del modelo</div>',
-            unsafe_allow_html=True
-        )
-
-        if estado == "Optimal":
-
-            st.markdown(
-                '<div class="status-good">Solución óptima encontrada.</div>',
-                unsafe_allow_html=True
-            )
-
-        else:
-
-            st.error(
-                "El modelo no encontró solución óptima. Revisa si hay suficientes operarios presentes o si las restricciones son muy fuertes."
-            )
-
-            st.write(
-                "Estado:",
-                estado
-            )
-
-            st.stop()
-
-        # ========================================================
-        # ASIGNACIONES
-        # ========================================================
-
-        asignaciones = []
-
-        for i in presentes:
-
-            tareas_asig = []
-
-            for j in tareas:
-
-                if value(
-                    x[(i, j)]
-                ) == 1:
-
-                    tareas_asig.append(
-                        nombre_tarea[j]
-                    )
-
-            if len(
-                tareas_asig
-            ) > 0:
-
-                asignaciones.append(
-                    [
-                        i,
-                        ", ".join(
-                            tareas_asig
-                        )
-                    ]
-                )
-
-        asignaciones_df = pd.DataFrame(
-            asignaciones,
-            columns=[
-                "ID_Worker",
-                "Tareas_Asignadas"
-            ]
-        )
-
-        # ========================================================
-        # DESVIACIONES
-        # ========================================================
-
-        desviaciones = []
-
-        for j in tareas:
-
-            if m[j] == 1:
-
-                desviaciones.append(
-                    [
-                        j,
-                        nombre_tarea[j],
-                        machine_name[j],
-                        round(
-                            V_std[j],
-                            2
-                        ),
-                        round(
-                            value(
-                                V_real[j]
-                            ),
-                            2
-                        ),
-                        round(
-                            value(
-                                d[j]
-                            ),
-                            2
-                        ),
-                        round(
-                            value(
-                                deficit[j]
-                            ),
-                            2
-                        ),
-                        round(
-                            value(
-                                exceso[j]
-                            ),
-                            2
-                        )
-                    ]
-                )
-
-        desv_df = pd.DataFrame(
-            desviaciones,
-            columns=[
-                "ID_Task",
-                "Tarea",
-                "Maquina",
-                "Velocidad_Estandar",
-                "Velocidad_Alcanzada",
-                "Desviacion_Absoluta",
-                "Deficit_Por_Debajo",
-                "Exceso_Por_Encima"
-            ]
-        )
-
-        desv_df = ordenar_maquinas(
-            desv_df
-        )
-
-        # ========================================================
-        # LLENADORA Y PRODUCCIÓN
-        # ========================================================
-
-        fila_llenadora = desv_df[
-            desv_df["ID_Task"] == ID_LLENADORA
-        ]
-
-        velocidad_llenadora = value(
-            V_real[ID_LLENADORA]
-        )
-
-        velocidad_ideal_llenadora = V_std[
-            ID_LLENADORA
-        ]
-
-        deficit_llenadora = value(
-            deficit[ID_LLENADORA]
-        )
-
-        botellas_reales = (
-            velocidad_llenadora
-            *
-            minutos_turno
-        )
-
-        botellas_ideales = (
-            velocidad_ideal_llenadora
-            *
-            minutos_turno
-        )
-
-        eficiencia = (
-            botellas_reales
-            /
-            botellas_ideales
-        ) * 100
-
-        perdida_botellas = (
-            botellas_ideales
-            -
-            botellas_reales
-        )
-
-        # ========================================================
-        # RESUMEN EJECUTIVO
-        # ========================================================
-
-        st.markdown(
-            '<div class="section-title">8. Resumen ejecutivo</div>',
-            unsafe_allow_html=True
-        )
-
-        r1, r2, r3, r4 = st.columns(
-            4
-        )
-
-        with r1:
-
-            metric_card(
-                "Velocidad llenadora",
-                f"{round(velocidad_llenadora, 2)}",
-                "botellas/min",
-                "green" if deficit_llenadora <= 0 else "orange"
-            )
-
-        with r2:
-
-            metric_card(
-                "Producción estimada",
-                f"{round(botellas_reales, 0):,.0f}",
-                "botellas/turno",
-                "teal"
-            )
-
-        with r3:
-
-            metric_card(
-                "Eficiencia estimada",
-                f"{round(eficiencia, 2)}%",
-                "comparada con producción ideal",
-                "green" if eficiencia >= 100 else "lime"
-            )
-
-        with r4:
-
-            metric_card(
-                "Pérdida estimada",
-                f"{round(perdida_botellas, 0):,.0f}",
-                "botellas/turno",
-                "orange" if perdida_botellas > 0 else "green"
-            )
-
-        # ========================================================
-        # TABLAS
-        # ========================================================
-
-        st.markdown(
-            '<div class="section-title">9. Asignación óptima</div>',
-            unsafe_allow_html=True
-        )
-
-        mostrar_tabla(
-            asignaciones_df
-        )
-
-        st.markdown(
-            '<div class="section-title">10. Desviaciones por máquina</div>',
-            unsafe_allow_html=True
-        )
-
-        mostrar_tabla(
-            desv_df
-        )
-
-        st.markdown(
-            '<div class="section-title">11. Revisión especial de la llenadora</div>',
-            unsafe_allow_html=True
-        )
-
-        mostrar_tabla(
-            fila_llenadora
-        )
-
-        resumen_produccion_df = pd.DataFrame(
-            {
-                "Indicador": [
-                    "Velocidad ideal llenadora",
-                    "Velocidad alcanzada llenadora",
-                    "Producción ideal del turno",
-                    "Producción estimada del turno",
-                    "Pérdida estimada del turno",
-                    "Eficiencia estimada"
-                ],
-                "Valor": [
-                    round(
-                        velocidad_ideal_llenadora,
-                        2
-                    ),
-                    round(
-                        velocidad_llenadora,
-                        2
-                    ),
-                    round(
-                        botellas_ideales,
-                        0
-                    ),
-                    round(
-                        botellas_reales,
-                        0
-                    ),
-                    round(
-                        perdida_botellas,
-                        0
-                    ),
-                    round(
-                        eficiencia,
-                        2
-                    )
-                ],
-                "Unidad": [
-                    "botellas/min",
-                    "botellas/min",
-                    "botellas/turno",
-                    "botellas/turno",
-                    "botellas/turno",
-                    "%"
-                ]
-            }
-        )
-
-        st.markdown(
-            '<div class="section-title">12. Producción y eficiencia</div>',
-            unsafe_allow_html=True
-        )
-
-        mostrar_tabla(
-            resumen_produccion_df
-        )
-
-        # ========================================================
-        # GRÁFICA VELOCIDAD IDEAL VS ALCANZADA
-        # ========================================================
-
-        st.markdown(
-            '<div class="section-title">13. Visualización de velocidades</div>',
-            unsafe_allow_html=True
-        )
-
-        grafica_df = desv_df.copy()
-
-        maquinas = grafica_df["Maquina"].tolist()
-        vel_ideal = grafica_df["Velocidad_Estandar"].tolist()
-        vel_real = grafica_df["Velocidad_Alcanzada"].tolist()
-
-        fig1, ax1 = plt.subplots(
-            figsize=(12, 6)
-        )
-
-        ax1.plot(
-            maquinas,
-            vel_ideal,
-            marker="o",
-            linewidth=3,
-            label="Velocidad ideal",
-            color="#064e3b"
-        )
-
-        ax1.plot(
-            maquinas,
-            vel_real,
-            marker="o",
-            linewidth=3,
-            label="Velocidad alcanzada",
-            color="#22c55e"
-        )
-
-        ax1.fill_between(
-            range(len(maquinas)),
-            vel_ideal,
-            vel_real,
-            alpha=0.12,
-            color="#16a34a"
-        )
-
-        ax1.set_xlabel(
-            "Máquinas"
-        )
-
-        ax1.set_ylabel(
-            "Velocidad botellas/min"
-        )
-
-        ax1.set_title(
-            "Curva de velocidad ideal vs alcanzada"
-        )
-
-        ax1.set_xticks(
-            range(len(maquinas))
-        )
-
-        ax1.set_xticklabels(
-            maquinas,
-            rotation=45,
-            ha="right"
-        )
-
-        ax1.grid(
-            True,
-            alpha=0.25
-        )
-
-        ax1.legend()
-
-        st.pyplot(
-            fig1
-        )
-
-        # ========================================================
-        # GRÁFICA DE EFICIENCIA
-        # ========================================================
-
-        fig2, ax2 = plt.subplots(
-            figsize=(6, 5)
-        )
-
-        ax2.bar(
-            [
-                "Eficiencia estimada"
-            ],
-            [
-                eficiencia
-            ],
-            color="#16a34a"
-        )
-
-        ax2.axhline(
-            y=100,
-            linestyle="--",
-            label="Meta ideal 100%",
-            color="#064e3b"
-        )
-
-        ax2.set_ylabel(
-            "Eficiencia (%)"
-        )
-
-        ax2.set_title(
-            "Eficiencia estimada de la línea"
-        )
-
-        ax2.set_ylim(
-            0,
-            max(
-                110,
-                eficiencia + 10
-            )
-        )
-
-        ax2.grid(
-            axis="y",
-            alpha=0.25
-        )
-
-        ax2.legend()
-
-        st.pyplot(
-            fig2
-        )
-
-        # ========================================================
-        # DESCARGA
-        # ========================================================
-
-        st.markdown(
-            '<div class="section-title">14. Descargar resultados</div>',
-            unsafe_allow_html=True
-        )
-
-        output = BytesIO()
-
-        with pd.ExcelWriter(
-            output,
-            engine="openpyxl"
-        ) as writer:
-
-            asignaciones_df.to_excel(
-                writer,
-                sheet_name="Asignaciones",
-                index=False
-            )
-
-            desv_df.to_excel(
-                writer,
-                sheet_name="Desviaciones",
-                index=False
-            )
-
-            resumen_produccion_df.to_excel(
-                writer,
-                sheet_name="Produccion_Eficiencia",
-                index=False
-            )
-
-            candidatos_llenadora_df.to_excel(
-                writer,
-                sheet_name="Candidatos_Llenadora",
-                index=False
-            )
-
-            workers_turno[
-                [
-                    "ID_Worker",
-                    "Schedule"
-                ]
-            ].to_excel(
-                writer,
-                sheet_name="Operarios_Turno",
-                index=False
-            )
-
-        output.seek(
-            0
-        )
-
-        nombre_salida = (
-            f"resultados_modelo_turno_{turno}_con_eficiencia.xlsx"
-        )
-
-        st.download_button(
-            label="Descargar resultados en Excel",
-            data=output,
-            file_name=nombre_salida,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-        # ========================================================
-        # INTERPRETACIÓN FINAL
-        # ========================================================
-
-        st.markdown(
-            '<div class="section-title">15. Interpretación del resultado</div>',
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            """
-            <div class="card">
-                <p>
-                La producción total se calcula usando la llenadora como cuello de botella.
-                Esto significa que la velocidad alcanzada en la llenadora limita la producción
-                estimada del turno.
-                </p>
-                <p>
-                <b>Producción estimada = velocidad alcanzada en llenadora × minutos del turno</b>
-                </p>
-                <p>
-                La eficiencia se obtiene comparando la producción estimada contra la producción ideal.
-                La asignación generada busca proteger la llenadora porque esta tarea tiene impacto directo
-                en la producción del turno.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    except Exception as e:
-
-        st.error(
-            "Ocurrió un error al ejecutar el modelo."
-        )
-
-        st.exception(
-            e
-        )
-
+        ])
+
+desv_df = pd.DataFrame(
+    desviaciones,
+    columns=[
+        'ID_Task',
+        'Tarea',
+        'Maquina',
+        'Velocidad_Estandar',
+        'Velocidad_Alcanzada',
+        'Desviacion_Absoluta',
+        'Deficit_Por_Debajo',
+        'Exceso_Por_Encima'
+    ]
+)
+
+print("\n======================")
+print("DESVIACIONES")
+print("======================")
+
+display(desv_df)
+
+
+# =========================================================
+# 23. REVISIÓN ESPECIAL DE LA LLENADORA
+# =========================================================
+
+print("\n======================")
+print("REVISIÓN ESPECIAL LLENADORA")
+print("======================")
+
+fila_llenadora = desv_df[
+    desv_df['ID_Task'] == ID_LLENADORA
+]
+
+display(fila_llenadora)
+
+velocidad_llenadora = value(
+    V_real[ID_LLENADORA]
+)
+
+velocidad_ideal_llenadora = V_std[
+    ID_LLENADORA
+]
+
+deficit_llenadora = value(
+    deficit[ID_LLENADORA]
+)
+
+exceso_llenadora = value(
+    exceso[ID_LLENADORA]
+)
+
+print("Velocidad ideal llenadora:", round(velocidad_ideal_llenadora, 2), "botellas/min")
+print("Velocidad alcanzada llenadora:", round(velocidad_llenadora, 2), "botellas/min")
+print("Déficit llenadora:", round(deficit_llenadora, 2), "botellas/min")
+print("Exceso llenadora:", round(exceso_llenadora, 2), "botellas/min")
+
+if deficit_llenadora > 0:
+    print("\nLa llenadora quedó por debajo de la velocidad ideal.")
+    print("Esto reduce la producción del turno.")
 else:
+    print("\nLa llenadora no quedó por debajo de la velocidad ideal.")
+    print("No hay pérdida por cuello de botella en llenadora.")
 
-    st.info(
-        "Selecciona el turno, marca los ausentes si aplica y presiona el botón para calcular."
+
+# =========================================================
+# 24. PRODUCCIÓN TOTAL Y EFICIENCIA
+# =========================================================
+
+# CORRECCIÓN:
+# Antes se multiplicaba por 480.
+# Ahora se multiplica por 403 minutos efectivos.
+
+botellas_reales = velocidad_llenadora * MINUTOS_EFECTIVOS_TURNO
+
+botellas_ideales = velocidad_ideal_llenadora * MINUTOS_EFECTIVOS_TURNO
+
+eficiencia = (
+    botellas_reales / botellas_ideales
+) * 100
+
+perdida_botellas = botellas_ideales - botellas_reales
+
+print("\n======================")
+print("PRODUCCIÓN TOTAL Y EFICIENCIA")
+print("======================")
+
+print("Minutos efectivos usados:", MINUTOS_EFECTIVOS_TURNO)
+print("Velocidad ideal llenadora:", round(velocidad_ideal_llenadora, 2), "botellas/min")
+print("Velocidad alcanzada llenadora:", round(velocidad_llenadora, 2), "botellas/min")
+
+print("\nProducción ideal del turno:", round(botellas_ideales, 0), "botellas/turno")
+print("Producción estimada del turno:", round(botellas_reales, 0), "botellas/turno")
+
+print("\nPérdida estimada:", round(perdida_botellas, 0), "botellas/turno")
+
+print("\nEficiencia estimada de la línea:", round(eficiencia, 2), "%")
+
+
+# =========================================================
+# 25. TABLA RESUMEN DE PRODUCCIÓN
+# =========================================================
+
+resumen_produccion_df = pd.DataFrame({
+    'Indicador': [
+        'Minutos efectivos del turno',
+        'Velocidad ideal llenadora',
+        'Velocidad alcanzada llenadora',
+        'Producción ideal del turno',
+        'Producción estimada del turno',
+        'Pérdida estimada del turno',
+        'Eficiencia estimada'
+    ],
+    'Valor': [
+        MINUTOS_EFECTIVOS_TURNO,
+        round(velocidad_ideal_llenadora, 2),
+        round(velocidad_llenadora, 2),
+        round(botellas_ideales, 0),
+        round(botellas_reales, 0),
+        round(perdida_botellas, 0),
+        round(eficiencia, 2)
+    ],
+    'Unidad': [
+        'minutos',
+        'botellas/min',
+        'botellas/min',
+        'botellas/turno',
+        'botellas/turno',
+        'botellas/turno',
+        '%'
+    ]
+})
+
+print("\n======================")
+print("RESUMEN PRODUCCIÓN Y EFICIENCIA")
+print("======================")
+
+display(resumen_produccion_df)
+
+
+# =========================================================
+# 26. CURVA VELOCIDAD IDEAL VS VELOCIDAD ALCANZADA
+# =========================================================
+
+maquinas = []
+vel_ideal = []
+vel_real = []
+
+for j in tareas:
+
+    if m[j] == 1:
+
+        maquinas.append(
+            machine_name[j]
+        )
+
+        vel_ideal.append(
+            V_std[j]
+        )
+
+        vel_real.append(
+            value(V_real[j])
+        )
+
+plt.figure(figsize=(12, 6))
+
+plt.plot(
+    maquinas,
+    vel_ideal,
+    marker='o',
+    label='Velocidad Ideal'
+)
+
+plt.plot(
+    maquinas,
+    vel_real,
+    marker='o',
+    label='Velocidad Alcanzada'
+)
+
+plt.xlabel("Máquinas")
+plt.ylabel("Velocidad botellas/min")
+plt.title("Curva Ideal vs Real")
+plt.xticks(rotation=45)
+plt.grid(True)
+plt.legend()
+plt.show()
+
+
+# =========================================================
+# 27. GRÁFICA DE EFICIENCIA
+# =========================================================
+
+plt.figure(figsize=(6, 5))
+
+plt.bar(
+    ["Eficiencia estimada"],
+    [eficiencia]
+)
+
+plt.axhline(
+    y=100,
+    linestyle="--",
+    label="Meta ideal 100%"
+)
+
+plt.ylabel("Eficiencia (%)")
+plt.title("Eficiencia estimada de la línea")
+plt.ylim(0, max(110, eficiencia + 10))
+plt.grid(axis="y", alpha=0.3)
+plt.legend()
+plt.show()
+
+
+# =========================================================
+# 28. GRÁFICA PRODUCCIÓN IDEAL VS PRODUCCIÓN ESTIMADA
+# =========================================================
+
+plt.figure(figsize=(7, 5))
+
+plt.bar(
+    ["Producción ideal", "Producción estimada"],
+    [botellas_ideales, botellas_reales]
+)
+
+plt.ylabel("Botellas por turno")
+plt.title("Producción ideal vs producción estimada")
+plt.grid(axis="y", alpha=0.3)
+plt.show()
+
+
+# =========================================================
+# 29. EXPORTAR RESULTADOS A EXCEL
+# =========================================================
+
+nombre_salida = f"resultados_modelo_turno_{turno}_con_eficiencia_403min.xlsx"
+
+with pd.ExcelWriter(nombre_salida, engine='openpyxl') as writer:
+
+    asignaciones_df.to_excel(
+        writer,
+        sheet_name='Asignaciones',
+        index=False
     )
+
+    desv_df.to_excel(
+        writer,
+        sheet_name='Desviaciones',
+        index=False
+    )
+
+    resumen_produccion_df.to_excel(
+        writer,
+        sheet_name='Produccion_Eficiencia',
+        index=False
+    )
+
+    candidatos_llenadora_df.to_excel(
+        writer,
+        sheet_name='Candidatos_Llenadora',
+        index=False
+    )
+
+    workers_turno[['ID_Worker', 'Name', 'Schedule']].to_excel(
+        writer,
+        sheet_name='Trabajadores_Turno',
+        index=False
+    )
+
+print("\n======================")
+print("ARCHIVO EXPORTADO")
+print("======================")
+
+print("Archivo creado:", nombre_salida)
+
+files.download(nombre_salida)
+
+
+# =========================================================
+# 30. EXPLICACIÓN FINAL
+# =========================================================
+
+print("\n======================")
+print("EXPLICACIÓN DEL RESULTADO")
+print("======================")
+
+print("""
+La producción total se calcula usando la llenadora como cuello de botella.
+
+En esta versión corregida, la producción ya no se calcula con 480 minutos,
+sino con 403 minutos efectivos de operación.
+
+Producción estimada = velocidad alcanzada en llenadora * 403 minutos efectivos
+
+La eficiencia se calcula comparando la producción estimada contra la producción ideal:
+
+Eficiencia = (producción estimada / producción ideal) * 100
+
+Donde:
+
+Producción ideal = velocidad estándar de la llenadora * 403 minutos efectivos
+
+Si la llenadora queda por debajo de su velocidad estándar, la eficiencia baja.
+Si la llenadora alcanza o supera su velocidad estándar, la eficiencia se acerca o supera el 100%.
+
+En este modelo corregido, la llenadora tiene prioridad porque es el cuello de botella.
+Por eso se penaliza fuertemente cuando la llenadora queda por debajo de su velocidad ideal.
+""")
