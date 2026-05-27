@@ -1,5 +1,3 @@
-%%writefile app.py
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -19,8 +17,6 @@ st.set_page_config(
 # ============================================================
 # PARÁMETROS TÉCNICOS OCULTOS
 # ============================================================
-# Estos parámetros ya no se muestran en el dashboard.
-# Se dejan fijos para no confundir al usuario final.
 
 ID_LLENADORA = "9"
 epsilon = 0.0001
@@ -171,12 +167,6 @@ st.markdown(
         font-weight: 650;
     }
 
-    .small-text {
-        color: #667085;
-        font-size: 0.92rem;
-        line-height: 1.5;
-    }
-
     div[data-testid="stFileUploader"] section {
         border-radius: 18px;
         border: 1px dashed #b7c7d9;
@@ -268,7 +258,10 @@ st.markdown(
 # 1. CARGAR ARCHIVO
 # ============================================================
 
-st.markdown('<div class="section-title">1. Cargar archivo Excel</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">1. Cargar archivo Excel</div>',
+    unsafe_allow_html=True
+)
 
 archivo = st.file_uploader(
     "Sube el archivo Excel del modelo",
@@ -334,7 +327,10 @@ except Exception as e:
 # 4. REVISAR DATOS CARGADOS
 # ============================================================
 
-st.markdown('<div class="section-title">2. Revisar datos cargados</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">2. Revisar datos cargados</div>',
+    unsafe_allow_html=True
+)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
     [
@@ -347,10 +343,16 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
 )
 
 with tab1:
-    st.dataframe(tasks_df, use_container_width=True)
+    st.dataframe(
+        tasks_df,
+        use_container_width=True
+    )
 
 with tab2:
-    st.dataframe(rel_speed_df, use_container_width=True)
+    st.dataframe(
+        rel_speed_df,
+        use_container_width=True
+    )
 
 with tab3:
     columnas_workers = [
@@ -364,16 +366,25 @@ with tab3:
     )
 
 with tab4:
-    st.dataframe(abilities_df, use_container_width=True)
+    st.dataframe(
+        abilities_df,
+        use_container_width=True
+    )
 
 with tab5:
-    st.dataframe(speed_df, use_container_width=True)
+    st.dataframe(
+        speed_df,
+        use_container_width=True
+    )
 
 # ============================================================
 # 5. CONFIGURACIÓN OPERATIVA
 # ============================================================
 
-st.markdown('<div class="section-title">3. Configuración operativa</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">3. Configuración operativa</div>',
+    unsafe_allow_html=True
+)
 
 col_conf1, col_conf2, col_conf3 = st.columns([1.2, 1, 1])
 
@@ -412,9 +423,15 @@ if len(workers_turno) == 0:
     st.error("No hay operarios programados para este turno.")
     st.stop()
 
-st.markdown('<div class="section-title">4. Operarios del turno</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">4. Operarios del turno</div>',
+    unsafe_allow_html=True
+)
 
-st.markdown('<div class="card">', unsafe_allow_html=True)
+st.markdown(
+    '<div class="card">',
+    unsafe_allow_html=True
+)
 
 st.write("Operarios programados en el turno seleccionado:")
 
@@ -423,13 +440,19 @@ st.dataframe(
     use_container_width=True
 )
 
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown(
+    '</div>',
+    unsafe_allow_html=True
+)
 
 # ============================================================
 # 6. AUSENTISMO
 # ============================================================
 
-st.markdown('<div class="section-title">5. Seleccionar ausentes</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">5. Seleccionar ausentes</div>',
+    unsafe_allow_html=True
+)
 
 opciones_ausentes = sorted(
     workers_turno["ID_Worker"].dropna().astype(str).tolist()
@@ -475,13 +498,19 @@ with m3:
         "green"
     )
 
-st.markdown('<div class="card">', unsafe_allow_html=True)
+st.markdown(
+    '<div class="card">',
+    unsafe_allow_html=True
+)
 
 st.write("ID de operarios presentes:")
 
 id_chips(presentes)
 
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown(
+    '</div>',
+    unsafe_allow_html=True
+)
 
 if len(presentes) == 0:
     st.error("No hay operarios presentes. No se puede resolver el modelo.")
@@ -491,22 +520,21 @@ if len(presentes) == 0:
 # 7. EJECUTAR MODELO
 # ============================================================
 
-st.markdown('<div class="section-title">6. Ejecutar optimización</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-title">6. Ejecutar optimización</div>',
+    unsafe_allow_html=True
+)
 
 if st.button("Calcular asignación óptima", type="primary"):
 
     try:
-        # =========================================================
-        # CONJUNTOS
-        # =========================================================
+        # ========================================================
+        # CONJUNTOS Y PARÁMETROS
+        # ========================================================
 
         tareas = list(
             tasks_df["ID_Task"]
         )
-
-        # =========================================================
-        # PARÁMETROS DEL EXCEL
-        # =========================================================
 
         m = dict(
             zip(
@@ -542,9 +570,9 @@ if st.button("Calcular asignación óptima", type="primary"):
             )
             st.stop()
 
-        # =========================================================
+        # ========================================================
         # MATRIZ DE HABILIDADES
-        # =========================================================
+        # ========================================================
 
         H = {}
 
@@ -558,9 +586,9 @@ if st.button("Calcular asignación óptima", type="primary"):
 
                 H[worker][tarea] = row[tarea]
 
-        # =========================================================
+        # ========================================================
         # MATRIZ SPEED FACTOR
-        # =========================================================
+        # ========================================================
 
         F = {}
 
@@ -574,9 +602,9 @@ if st.button("Calcular asignación óptima", type="primary"):
 
                 F[worker][tarea] = row[tarea]
 
-        # =========================================================
+        # ========================================================
         # VALIDACIONES
-        # =========================================================
+        # ========================================================
 
         errores = []
 
@@ -607,9 +635,9 @@ if st.button("Calcular asignación óptima", type="primary"):
                 st.write(error)
             st.stop()
 
-        # =========================================================
+        # ========================================================
         # CANDIDATOS PARA LLENADORA
-        # =========================================================
+        # ========================================================
 
         candidatos_llenadora = []
 
@@ -665,18 +693,18 @@ if st.button("Calcular asignación óptima", type="primary"):
             ]
         )
 
-        # =========================================================
+        # ========================================================
         # CREAR MODELO
-        # =========================================================
+        # ========================================================
 
         modelo = LpProblem(
             "Asignacion_Optima_Con_Eficiencia",
             LpMinimize
         )
 
-        # =========================================================
+        # ========================================================
         # VARIABLES
-        # =========================================================
+        # ========================================================
 
         x = LpVariable.dicts(
             "x",
@@ -714,9 +742,9 @@ if st.button("Calcular asignación óptima", type="primary"):
             cat="Binary"
         )
 
-        # =========================================================
+        # ========================================================
         # FUNCIÓN OBJETIVO
-        # =========================================================
+        # ========================================================
 
         penalizacion_llenadora = (
             peso_deficit_llenadora * deficit[ID_LLENADORA]
@@ -746,9 +774,9 @@ if st.button("Calcular asignación óptima", type="primary"):
             - premio_habilidad
         )
 
-        # =========================================================
+        # ========================================================
         # RESTRICCIONES
-        # =========================================================
+        # ========================================================
 
         for j in tareas:
             modelo += (
@@ -855,9 +883,9 @@ if st.button("Calcular asignación óptima", type="primary"):
                     exceso[j] == 0
                 )
 
-        # =========================================================
+        # ========================================================
         # RESOLVER
-        # =========================================================
+        # ========================================================
 
         solver = PULP_CBC_CMD(msg=False)
 
@@ -865,7 +893,10 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         estado = LpStatus[modelo.status]
 
-        st.markdown('<div class="section-title">7. Estado del modelo</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-title">7. Estado del modelo</div>',
+            unsafe_allow_html=True
+        )
 
         if estado == "Optimal":
             st.markdown(
@@ -880,9 +911,9 @@ if st.button("Calcular asignación óptima", type="primary"):
             st.write("Estado:", estado)
             st.stop()
 
-        # =========================================================
+        # ========================================================
         # ASIGNACIONES
-        # =========================================================
+        # ========================================================
 
         asignaciones = []
 
@@ -915,9 +946,9 @@ if st.button("Calcular asignación óptima", type="primary"):
             ]
         )
 
-        # =========================================================
+        # ========================================================
         # DESVIACIONES
-        # =========================================================
+        # ========================================================
 
         desviaciones = []
 
@@ -952,9 +983,9 @@ if st.button("Calcular asignación óptima", type="primary"):
             ]
         )
 
-        # =========================================================
+        # ========================================================
         # LLENADORA Y PRODUCCIÓN
-        # =========================================================
+        # ========================================================
 
         fila_llenadora = desv_df[
             desv_df["ID_Task"] == ID_LLENADORA
@@ -972,10 +1003,6 @@ if st.button("Calcular asignación óptima", type="primary"):
             deficit[ID_LLENADORA]
         )
 
-        exceso_llenadora = value(
-            exceso[ID_LLENADORA]
-        )
-
         botellas_reales = velocidad_llenadora * minutos_turno
 
         botellas_ideales = velocidad_ideal_llenadora * minutos_turno
@@ -986,11 +1013,14 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         perdida_botellas = botellas_ideales - botellas_reales
 
-        # =========================================================
+        # ========================================================
         # RESUMEN EJECUTIVO
-        # =========================================================
+        # ========================================================
 
-        st.markdown('<div class="section-title">8. Resumen ejecutivo</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-title">8. Resumen ejecutivo</div>',
+            unsafe_allow_html=True
+        )
 
         r1, r2, r3, r4 = st.columns(4)
 
@@ -1047,25 +1077,34 @@ if st.button("Calcular asignación óptima", type="primary"):
                 unsafe_allow_html=True
             )
 
-        # =========================================================
+        # ========================================================
         # TABLAS
-        # =========================================================
+        # ========================================================
 
-        st.markdown('<div class="section-title">9. Asignación óptima</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-title">9. Asignación óptima</div>',
+            unsafe_allow_html=True
+        )
 
         st.dataframe(
             asignaciones_df,
             use_container_width=True
         )
 
-        st.markdown('<div class="section-title">10. Desviaciones por máquina</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-title">10. Desviaciones por máquina</div>',
+            unsafe_allow_html=True
+        )
 
         st.dataframe(
             desv_df,
             use_container_width=True
         )
 
-        st.markdown('<div class="section-title">11. Revisión especial de la llenadora</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-title">11. Revisión especial de la llenadora</div>',
+            unsafe_allow_html=True
+        )
 
         st.dataframe(
             fila_llenadora,
@@ -1101,18 +1140,24 @@ if st.button("Calcular asignación óptima", type="primary"):
             }
         )
 
-        st.markdown('<div class="section-title">12. Producción y eficiencia</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-title">12. Producción y eficiencia</div>',
+            unsafe_allow_html=True
+        )
 
         st.dataframe(
             resumen_produccion_df,
             use_container_width=True
         )
 
-        # =========================================================
+        # ========================================================
         # GRÁFICAS
-        # =========================================================
+        # ========================================================
 
-        st.markdown('<div class="section-title">13. Visualización de resultados</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-title">13. Visualización de resultados</div>',
+            unsafe_allow_html=True
+        )
 
         maquinas = []
         vel_ideal = []
@@ -1195,11 +1240,14 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         st.pyplot(fig3)
 
-        # =========================================================
+        # ========================================================
         # DESCARGA
-        # =========================================================
+        # ========================================================
 
-        st.markdown('<div class="section-title">14. Descargar resultados</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-title">14. Descargar resultados</div>',
+            unsafe_allow_html=True
+        )
 
         output = BytesIO()
 
@@ -1246,11 +1294,14 @@ if st.button("Calcular asignación óptima", type="primary"):
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-        # =========================================================
-        # EXPLICACIÓN FINAL
-        # =========================================================
+        # ========================================================
+        # INTERPRETACIÓN FINAL
+        # ========================================================
 
-        st.markdown('<div class="section-title">15. Interpretación del resultado</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="section-title">15. Interpretación del resultado</div>',
+            unsafe_allow_html=True
+        )
 
         st.markdown(
             """
