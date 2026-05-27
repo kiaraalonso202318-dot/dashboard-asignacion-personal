@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pulp import *
 from io import BytesIO
+import unicodedata
 
 # ============================================================
 # CONFIGURACIÓN GENERAL
@@ -87,7 +88,7 @@ st.markdown(
     }
 
     .card {
-        background: rgba(255, 255, 255, 0.92);
+        background: rgba(255, 255, 255, 0.94);
         border-radius: 24px;
         padding: 1.3rem;
         border: 1px solid #d9f2e3;
@@ -141,10 +142,6 @@ st.markdown(
 
     .lime {
         border-left: 8px solid #84cc16;
-    }
-
-    .red {
-        border-left: 8px solid #dc2626;
     }
 
     .orange {
@@ -243,6 +240,16 @@ def id_chips(ids):
     st.markdown(chips, unsafe_allow_html=True)
 
 
+def limpiar_texto(texto):
+    texto = str(texto).strip().lower()
+    texto = unicodedata.normalize("NFKD", texto)
+    texto = "".join([c for c in texto if not unicodedata.combining(c)])
+    texto = texto.replace(" ", "")
+    texto = texto.replace("_", "")
+    texto = texto.replace("-", "")
+    return texto
+
+
 def obtener_columnas_tareas(df):
     columnas_no_tareas = [
         "ID_Worker",
@@ -284,69 +291,32 @@ def construir_matriz(df):
     return matriz, columnas_tareas
 
 
-def tabla_verde(df):
-    columnas_numericas = df.select_dtypes(include=["number"]).columns.tolist()
-
-    if len(columnas_numericas) > 0:
-        return (
-            df.style
-            .background_gradient(
-                subset=columnas_numericas,
-                cmap="Greens"
-            )
-            .set_table_styles(
-                [
-                    {
-                        "selector": "th",
-                        "props": [
-                            ("background-color", "#064e3b"),
-                            ("color", "white"),
-                            ("font-weight", "bold")
-                        ]
-                    },
-                    {
-                        "selector": "td",
-                        "props": [
-                            ("border-color", "#d9f2e3")
-                        ]
-                    }
-                ]
-            )
-        )
-
-    return (
-        df.style
-        .set_table_styles(
-            [
-                {
-                    "selector": "th",
-                    "props": [
-                        ("background-color", "#064e3b"),
-                        ("color", "white"),
-                        ("font-weight", "bold")
-                    ]
-                }
-            ]
-        )
+def mostrar_tabla(df):
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True
     )
 
 
 def ordenar_maquinas(df):
-    orden_deseado = [
-        "Descapsuladora",
-        "Lavadora",
-        "Llenadora",
-        "Etiquetadora",
-        "Empacadora",
-        "Paletizadora"
-    ]
+    orden_deseado = {
+        "descapsulador": 1,
+        "descapsuladora": 1,
+        "lavadora": 2,
+        "llenadora": 3,
+        "etiquetadora": 4,
+        "empacadora": 5,
+        "paletizadora": 6
+    }
 
     df = df.copy()
 
     df["Orden_Maquina"] = df["Maquina"].apply(
-        lambda x: orden_deseado.index(x)
-        if x in orden_deseado
-        else 999
+        lambda x: orden_deseado.get(
+            limpiar_texto(x),
+            999
+        )
     )
 
     df = df.sort_values(
@@ -504,16 +474,10 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
 )
 
 with tab1:
-    st.dataframe(
-        tabla_verde(tasks_df),
-        use_container_width=True
-    )
+    mostrar_tabla(tasks_df)
 
 with tab2:
-    st.dataframe(
-        tabla_verde(rel_speed_df),
-        use_container_width=True
-    )
+    mostrar_tabla(rel_speed_df)
 
 with tab3:
     columnas_workers = [
@@ -521,22 +485,13 @@ with tab3:
         if col in workers_df.columns
     ]
 
-    st.dataframe(
-        tabla_verde(workers_df[columnas_workers]),
-        use_container_width=True
-    )
+    mostrar_tabla(workers_df[columnas_workers])
 
 with tab4:
-    st.dataframe(
-        tabla_verde(abilities_df),
-        use_container_width=True
-    )
+    mostrar_tabla(abilities_df)
 
 with tab5:
-    st.dataframe(
-        tabla_verde(speed_df),
-        use_container_width=True
-    )
+    mostrar_tabla(speed_df)
 
 # ============================================================
 # 5. CONFIGURACIÓN OPERATIVA
@@ -598,9 +553,8 @@ st.markdown(
 
 st.write("Operarios programados en el turno seleccionado:")
 
-st.dataframe(
-    tabla_verde(workers_turno[["ID_Worker", "Schedule"]]),
-    use_container_width=True
+mostrar_tabla(
+    workers_turno[["ID_Worker", "Schedule"]]
 )
 
 st.markdown(
@@ -1288,8 +1242,6 @@ if st.button(
                 "orange" if perdida_botellas > 0 else "green"
             )
 
-        # Se eliminó la advertencia roja de la llenadora.
-
         # ========================================================
         # TABLAS
         # ========================================================
@@ -1299,9 +1251,8 @@ if st.button(
             unsafe_allow_html=True
         )
 
-        st.dataframe(
-            tabla_verde(asignaciones_df),
-            use_container_width=True
+        mostrar_tabla(
+            asignaciones_df
         )
 
         st.markdown(
@@ -1309,9 +1260,8 @@ if st.button(
             unsafe_allow_html=True
         )
 
-        st.dataframe(
-            tabla_verde(desv_df),
-            use_container_width=True
+        mostrar_tabla(
+            desv_df
         )
 
         st.markdown(
@@ -1319,9 +1269,8 @@ if st.button(
             unsafe_allow_html=True
         )
 
-        st.dataframe(
-            tabla_verde(fila_llenadora),
-            use_container_width=True
+        mostrar_tabla(
+            fila_llenadora
         )
 
         resumen_produccion_df = pd.DataFrame(
@@ -1376,9 +1325,8 @@ if st.button(
             unsafe_allow_html=True
         )
 
-        st.dataframe(
-            tabla_verde(resumen_produccion_df),
-            use_container_width=True
+        mostrar_tabla(
+            resumen_produccion_df
         )
 
         # ========================================================
@@ -1459,13 +1407,15 @@ if st.button(
             fig1
         )
 
-        # Se eliminó la gráfica de producción ideal vs producción estimada.
+        # ========================================================
+        # GRÁFICA DE EFICIENCIA
+        # ========================================================
 
-        fig3, ax3 = plt.subplots(
+        fig2, ax2 = plt.subplots(
             figsize=(6, 5)
         )
 
-        ax3.bar(
+        ax2.bar(
             [
                 "Eficiencia estimada"
             ],
@@ -1475,22 +1425,22 @@ if st.button(
             color="#16a34a"
         )
 
-        ax3.axhline(
+        ax2.axhline(
             y=100,
             linestyle="--",
             label="Meta ideal 100%",
             color="#064e3b"
         )
 
-        ax3.set_ylabel(
+        ax2.set_ylabel(
             "Eficiencia (%)"
         )
 
-        ax3.set_title(
+        ax2.set_title(
             "Eficiencia estimada de la línea"
         )
 
-        ax3.set_ylim(
+        ax2.set_ylim(
             0,
             max(
                 110,
@@ -1498,15 +1448,15 @@ if st.button(
             )
         )
 
-        ax3.grid(
+        ax2.grid(
             axis="y",
             alpha=0.25
         )
 
-        ax3.legend()
+        ax2.legend()
 
         st.pyplot(
-            fig3
+            fig2
         )
 
         # ========================================================
