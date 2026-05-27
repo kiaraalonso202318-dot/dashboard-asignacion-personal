@@ -10,16 +10,108 @@ from io import BytesIO
 
 st.set_page_config(
     page_title="Dashboard de Asignación de Personal",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-st.title("Dashboard de Asignación Óptima de Personal")
+# ============================================================
+# ESTILO VISUAL
+# ============================================================
 
-st.write(
-    "Esta aplicación permite cargar el archivo Excel, seleccionar el turno, "
-    "registrar ausencias y calcular la asignación óptima del personal. "
-    "El modelo prioriza la llenadora como cuello de botella, estima producción "
-    "y calcula la eficiencia de la línea."
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #f7f9fc;
+    }
+
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    .header-card {
+        background: linear-gradient(135deg, #b00020 0%, #e53935 55%, #ff7043 100%);
+        padding: 2rem;
+        border-radius: 18px;
+        color: white;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .header-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 0.3rem;
+    }
+
+    .header-subtitle {
+        font-size: 1rem;
+        opacity: 0.95;
+    }
+
+    .section-card {
+        background: white;
+        padding: 1.2rem;
+        border-radius: 16px;
+        border: 1px solid #e6e9ef;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+        margin-bottom: 1rem;
+    }
+
+    .small-note {
+        font-size: 0.9rem;
+        color: #5f6b7a;
+    }
+
+    div[data-testid="stMetric"] {
+        background-color: white;
+        border: 1px solid #e6e9ef;
+        padding: 1rem;
+        border-radius: 14px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+    }
+
+    div[data-testid="stDataFrame"] {
+        border-radius: 12px;
+    }
+
+    .stButton > button {
+        border-radius: 12px;
+        padding: 0.7rem 1.2rem;
+        font-weight: 700;
+    }
+
+    .stDownloadButton > button {
+        border-radius: 12px;
+        padding: 0.7rem 1.2rem;
+        font-weight: 700;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ============================================================
+# ENCABEZADO
+# ============================================================
+
+st.markdown(
+    """
+    <div class="header-card">
+        <div class="header-title">Dashboard de Asignación Óptima de Personal</div>
+        <div class="header-subtitle">
+            Herramienta de apoyo para asignar operarios por turno considerando ausentismo,
+            habilidades, velocidades relativas, prioridad de la llenadora, producción y eficiencia.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.info(
+    "Por confidencialidad, el dashboard trabaja únicamente con el ID del operario. "
+    "No se muestran nombres del personal en la aplicación ni en el archivo de resultados."
 )
 
 # ============================================================
@@ -34,7 +126,7 @@ archivo = st.file_uploader(
 )
 
 if archivo is None:
-    st.info("Sube el archivo Excel para iniciar.")
+    st.warning("Sube el archivo Excel para iniciar el análisis.")
     st.stop()
 
 # ============================================================
@@ -101,7 +193,6 @@ try:
 
     tasks_df["Task"] = tasks_df["Task"].astype(str).str.strip()
     rel_speed_df["Machine"] = rel_speed_df["Machine"].astype(str).str.strip()
-    workers_df["Name"] = workers_df["Name"].astype(str).str.strip()
 
 except Exception as e:
     st.error("Hay un problema con los nombres de columnas del Excel.")
@@ -114,20 +205,50 @@ except Exception as e:
 
 st.subheader("2. Revisar datos cargados")
 
-with st.expander("Ver hoja Tasks"):
-    st.dataframe(tasks_df, use_container_width=True)
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    [
+        "Tasks",
+        "Rel_Speed",
+        "Workers",
+        "Abilities",
+        "Speed_Factor"
+    ]
+)
 
-with st.expander("Ver hoja Rel_Speed"):
-    st.dataframe(rel_speed_df, use_container_width=True)
+with tab1:
+    st.dataframe(
+        tasks_df,
+        use_container_width=True
+    )
 
-with st.expander("Ver hoja Workers"):
-    st.dataframe(workers_df, use_container_width=True)
+with tab2:
+    st.dataframe(
+        rel_speed_df,
+        use_container_width=True
+    )
 
-with st.expander("Ver hoja Abilities"):
-    st.dataframe(abilities_df, use_container_width=True)
+with tab3:
+    columnas_workers_mostrar = [
+        col for col in ["ID_Worker", "Schedule"]
+        if col in workers_df.columns
+    ]
 
-with st.expander("Ver hoja Speed_Factor"):
-    st.dataframe(speed_df, use_container_width=True)
+    st.dataframe(
+        workers_df[columnas_workers_mostrar],
+        use_container_width=True
+    )
+
+with tab4:
+    st.dataframe(
+        abilities_df,
+        use_container_width=True
+    )
+
+with tab5:
+    st.dataframe(
+        speed_df,
+        use_container_width=True
+    )
 
 # ============================================================
 # 5. SELECCIÓN DE TURNO
@@ -148,15 +269,25 @@ workers_turno = workers_df[
     workers_df["Schedule"] == str(turno)
 ].copy()
 
-st.write("Trabajadores programados en el turno seleccionado:")
+st.markdown(
+    '<div class="section-card">',
+    unsafe_allow_html=True
+)
+
+st.write("Operarios programados en el turno seleccionado:")
 
 st.dataframe(
-    workers_turno[["ID_Worker", "Name"]],
+    workers_turno[["ID_Worker", "Schedule"]],
     use_container_width=True
 )
 
+st.markdown(
+    "</div>",
+    unsafe_allow_html=True
+)
+
 if len(workers_turno) == 0:
-    st.error("No hay trabajadores programados para este turno.")
+    st.error("No hay operarios programados para este turno.")
     st.stop()
 
 # ============================================================
@@ -165,22 +296,14 @@ if len(workers_turno) == 0:
 
 st.subheader("4. Seleccionar ausentes")
 
-opciones_ausentes = []
-
-for _, row in workers_turno.iterrows():
-    opciones_ausentes.append(
-        f"{row['ID_Worker']} - {row['Name']}"
-    )
-
-ausentes_seleccionados = st.multiselect(
-    "Selecciona los trabajadores ausentes. Si no faltó nadie, deja vacío.",
-    opciones_ausentes
+opciones_ausentes = sorted(
+    workers_turno["ID_Worker"].dropna().astype(str).tolist()
 )
 
-ausentes = [
-    opcion.split(" - ")[0]
-    for opcion in ausentes_seleccionados
-]
+ausentes = st.multiselect(
+    "Selecciona los ID de los operarios ausentes. Si no faltó nadie, deja vacío.",
+    opciones_ausentes
+)
 
 trabajadores = list(
     workers_turno["ID_Worker"]
@@ -194,20 +317,20 @@ presentes = [
 c1, c2, c3 = st.columns(3)
 
 with c1:
-    st.metric("Programados", len(trabajadores))
+    st.metric("Operarios programados", len(trabajadores))
 
 with c2:
-    st.metric("Ausentes", len(ausentes))
+    st.metric("Operarios ausentes", len(ausentes))
 
 with c3:
-    st.metric("Presentes", len(presentes))
+    st.metric("Operarios presentes", len(presentes))
 
-st.write("Trabajadores presentes:")
+st.write("ID de operarios presentes:")
 
 st.write(presentes)
 
 if len(presentes) == 0:
-    st.error("No hay trabajadores presentes. No se puede resolver el modelo.")
+    st.error("No hay operarios presentes. No se puede resolver el modelo.")
     st.stop()
 
 # ============================================================
@@ -253,12 +376,12 @@ peso_desviacion_otras = st.sidebar.number_input(
 habilidad_minima = st.sidebar.number_input(
     "Habilidad mínima para asignar",
     min_value=0.0,
-    value=0.0,
+    value=1.0,
     step=1.0
 )
 
 max_tareas_por_trabajador = st.sidebar.number_input(
-    "Máximo de tareas por trabajador",
+    "Máximo de tareas por operario",
     min_value=1,
     max_value=10,
     value=2,
@@ -270,6 +393,13 @@ minutos_turno = st.sidebar.number_input(
     min_value=1,
     value=480,
     step=1
+)
+
+st.sidebar.markdown("---")
+
+st.sidebar.caption(
+    "Nota: si la matriz de habilidades usa 1 para apto y 0 para no apto, "
+    "la habilidad mínima debe quedar en 1."
 )
 
 # ============================================================
@@ -367,10 +497,10 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         for i in presentes:
             if i not in H:
-                errores.append(f"El trabajador {i} no aparece en Abilities.")
+                errores.append(f"El operario con ID {i} no aparece en Abilities.")
 
             if i not in F:
-                errores.append(f"El trabajador {i} no aparece en Speed_Factor.")
+                errores.append(f"El operario con ID {i} no aparece en Speed_Factor.")
 
         for j in tareas:
             nombre = nombre_tarea[j]
@@ -433,14 +563,9 @@ if st.button("Calcular asignación óptima", type="primary"):
                 0
             )
 
-            nombre_operario = workers_df[
-                workers_df["ID_Worker"] == i
-            ]["Name"].values[0]
-
             candidatos_llenadora.append(
                 [
                     i,
-                    nombre_operario,
                     H[i][nombre_llenadora],
                     F[i][nombre_llenadora],
                     velocidad_estimada,
@@ -453,7 +578,6 @@ if st.button("Calcular asignación óptima", type="primary"):
             candidatos_llenadora,
             columns=[
                 "ID_Worker",
-                "Trabajador",
                 "Habilidad_Llenadora",
                 "Speed_Factor_Llenadora",
                 "Velocidad_Estimada_Llenadora",
@@ -567,7 +691,7 @@ if st.button("Calcular asignación óptima", type="primary"):
         # RESTRICCIONES
         # =========================================================
 
-        # Cada tarea debe cubrirse exactamente por un trabajador
+        # Cada tarea debe cubrirse exactamente por un operario
         for j in tareas:
             modelo += (
                 lpSum(
@@ -587,7 +711,7 @@ if st.button("Calcular asignación óptima", type="primary"):
                 1 + y[i]
             )
 
-        # Máximo de tareas por trabajador
+        # Máximo de tareas por operario
         for i in presentes:
             modelo += (
                 lpSum(
@@ -598,7 +722,7 @@ if st.button("Calcular asignación óptima", type="primary"):
                 max_tareas_por_trabajador
             )
 
-        # No asignar trabajador si no tiene habilidad suficiente
+        # No asignar operario si no tiene habilidad suficiente
         for i in presentes:
 
             for j in tareas:
@@ -690,13 +814,14 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         st.subheader("8. Estado del modelo")
 
-        st.write(estado)
-
-        if estado != "Optimal":
+        if estado == "Optimal":
+            st.success("Solución óptima encontrada.")
+        else:
             st.error(
                 "El modelo no encontró solución óptima. "
-                "Revisa si hay suficientes trabajadores presentes o si las restricciones son muy fuertes."
+                "Revisa si hay suficientes operarios presentes o si las restricciones son muy fuertes."
             )
+            st.write("Estado:", estado)
             st.stop()
 
         # =========================================================
@@ -719,14 +844,9 @@ if st.button("Calcular asignación óptima", type="primary"):
 
             if len(tareas_asig) > 0:
 
-                nombre_operario = workers_df[
-                    workers_df["ID_Worker"] == i
-                ]["Name"].values[0]
-
                 asignaciones.append(
                     [
                         i,
-                        nombre_operario,
                         ", ".join(tareas_asig)
                     ]
                 )
@@ -735,7 +855,6 @@ if st.button("Calcular asignación óptima", type="primary"):
             asignaciones,
             columns=[
                 "ID_Worker",
-                "Trabajador",
                 "Tareas Asignadas"
             ]
         )
@@ -1066,9 +1185,9 @@ if st.button("Calcular asignación óptima", type="primary"):
                 index=False
             )
 
-            workers_turno[["ID_Worker", "Name", "Schedule"]].to_excel(
+            workers_turno[["ID_Worker", "Schedule"]].to_excel(
                 writer,
-                sheet_name="Trabajadores_Turno",
+                sheet_name="Operarios_Turno",
                 index=False
             )
 
@@ -1111,7 +1230,7 @@ if st.button("Calcular asignación óptima", type="primary"):
         )
 
         st.write(
-            "En este modelo corregido, la llenadora tiene prioridad porque es el cuello de botella. "
+            "En este modelo, la llenadora tiene prioridad porque es el cuello de botella. "
             "Por eso se penaliza fuertemente cuando la llenadora queda por debajo de su velocidad ideal."
         )
 
