@@ -33,164 +33,181 @@ st.markdown(
     """
     <style>
     .stApp {
-        background: linear-gradient(135deg, #f4f7fb 0%, #eef4f1 100%);
+        background: linear-gradient(135deg, #f2fbf6 0%, #eef8f2 45%, #f7fafc 100%);
     }
 
     .block-container {
         padding-top: 2rem;
         padding-bottom: 3rem;
-        max-width: 1250px;
+        max-width: 1280px;
     }
 
     .hero {
-        background: linear-gradient(135deg, #0f5c3f 0%, #16865d 45%, #c1121f 100%);
-        padding: 2.2rem 2.4rem;
-        border-radius: 26px;
+        background: linear-gradient(135deg, #064e3b 0%, #0f766e 48%, #16a34a 100%);
+        padding: 2.3rem 2.5rem;
+        border-radius: 28px;
         color: white;
         margin-bottom: 1.4rem;
-        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+        box-shadow: 0 20px 45px rgba(6, 78, 59, 0.22);
     }
 
     .hero h1 {
-        font-size: 2.35rem;
-        margin-bottom: 0.5rem;
-        font-weight: 850;
-        letter-spacing: -0.03em;
+        font-size: 2.45rem;
+        margin-bottom: 0.55rem;
+        font-weight: 900;
+        letter-spacing: -0.035em;
     }
 
     .hero p {
         font-size: 1.05rem;
-        line-height: 1.55;
+        line-height: 1.6;
         opacity: 0.96;
         margin: 0;
-        max-width: 950px;
+        max-width: 970px;
     }
 
     .privacy-box {
-        background: #e8f5ee;
-        border: 1px solid #bde3cf;
-        color: #0f5c3f;
+        background: linear-gradient(135deg, #dcfce7 0%, #ecfdf5 100%);
+        border: 1px solid #86efac;
+        color: #14532d;
         padding: 1rem 1.2rem;
-        border-radius: 18px;
+        border-radius: 20px;
         margin-bottom: 1.4rem;
-        font-weight: 500;
+        font-weight: 600;
+        box-shadow: 0 6px 18px rgba(22, 163, 74, 0.08);
     }
 
     .section-title {
         font-size: 1.45rem;
-        font-weight: 800;
-        margin-top: 1.5rem;
-        margin-bottom: 0.8rem;
-        color: #17324d;
+        font-weight: 850;
+        margin-top: 1.6rem;
+        margin-bottom: 0.85rem;
+        color: #064e3b;
+        letter-spacing: -0.01em;
     }
 
     .card {
-        background: white;
-        border-radius: 22px;
-        padding: 1.25rem;
-        border: 1px solid #e7edf3;
-        box-shadow: 0 8px 24px rgba(22, 45, 61, 0.06);
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 24px;
+        padding: 1.3rem;
+        border: 1px solid #d9f2e3;
+        box-shadow: 0 10px 28px rgba(6, 78, 59, 0.07);
         margin-bottom: 1rem;
     }
 
     .metric-card {
         background: white;
-        border-radius: 22px;
-        padding: 1.2rem 1.25rem;
-        border: 1px solid #e8eef3;
-        box-shadow: 0 8px 20px rgba(20, 40, 60, 0.06);
-        min-height: 125px;
+        border-radius: 24px;
+        padding: 1.25rem 1.3rem;
+        border: 1px solid #d9f2e3;
+        box-shadow: 0 10px 26px rgba(6, 78, 59, 0.08);
+        min-height: 130px;
     }
 
     .metric-label {
         font-size: 0.86rem;
-        font-weight: 700;
-        color: #667085;
+        font-weight: 800;
+        color: #407060;
         margin-bottom: 0.45rem;
     }
 
     .metric-value {
-        font-size: 2.05rem;
-        font-weight: 850;
-        color: #101828;
+        font-size: 2.08rem;
+        font-weight: 900;
+        color: #052e26;
         margin-bottom: 0.25rem;
     }
 
     .metric-foot {
         font-size: 0.84rem;
-        color: #667085;
+        color: #64756d;
     }
 
     .green {
-        border-left: 7px solid #16865d;
+        border-left: 8px solid #16a34a;
+    }
+
+    .darkgreen {
+        border-left: 8px solid #064e3b;
+    }
+
+    .mint {
+        border-left: 8px solid #34d399;
+    }
+
+    .teal {
+        border-left: 8px solid #0f766e;
+    }
+
+    .lime {
+        border-left: 8px solid #84cc16;
     }
 
     .red {
-        border-left: 7px solid #c1121f;
-    }
-
-    .blue {
-        border-left: 7px solid #2474b5;
+        border-left: 8px solid #dc2626;
     }
 
     .orange {
-        border-left: 7px solid #f59e0b;
+        border-left: 8px solid #f59e0b;
     }
 
     .id-chip {
         display: inline-block;
-        background: #e8f5ee;
-        color: #0f5c3f;
-        border: 1px solid #bde3cf;
-        padding: 0.45rem 0.75rem;
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        color: #064e3b;
+        border: 1px solid #86efac;
+        padding: 0.48rem 0.82rem;
         border-radius: 999px;
         margin: 0.25rem;
-        font-weight: 750;
+        font-weight: 800;
         font-size: 0.95rem;
+        box-shadow: 0 4px 10px rgba(22, 163, 74, 0.12);
     }
 
     .status-good {
-        background: #e8f5ee;
-        color: #0f5c3f;
-        border: 1px solid #bde3cf;
+        background: linear-gradient(135deg, #dcfce7 0%, #ecfdf5 100%);
+        color: #14532d;
+        border: 1px solid #86efac;
         padding: 1rem;
-        border-radius: 18px;
-        font-weight: 650;
+        border-radius: 20px;
+        font-weight: 750;
+        box-shadow: 0 6px 18px rgba(22, 163, 74, 0.10);
     }
 
-    .status-bad {
-        background: #fdecec;
-        color: #a40e1a;
-        border: 1px solid #f3b6bc;
+    .soft-note {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
         padding: 1rem;
-        border-radius: 18px;
-        font-weight: 650;
+        border-radius: 20px;
+        font-weight: 600;
+        margin-bottom: 1rem;
     }
 
     div[data-testid="stFileUploader"] section {
-        border-radius: 18px;
-        border: 1px dashed #b7c7d9;
+        border-radius: 20px;
+        border: 1px dashed #86efac;
         background: #ffffff;
     }
 
     .stButton > button {
-        background: linear-gradient(135deg, #0f5c3f 0%, #16865d 100%);
+        background: linear-gradient(135deg, #064e3b 0%, #16a34a 100%);
         color: white;
         border: none;
-        border-radius: 14px;
-        padding: 0.75rem 1.3rem;
-        font-weight: 800;
-        box-shadow: 0 8px 18px rgba(15, 92, 63, 0.22);
+        border-radius: 16px;
+        padding: 0.78rem 1.35rem;
+        font-weight: 850;
+        box-shadow: 0 10px 22px rgba(22, 163, 74, 0.24);
     }
 
     .stDownloadButton > button {
-        background: linear-gradient(135deg, #c1121f 0%, #e63946 100%);
+        background: linear-gradient(135deg, #0f766e 0%, #22c55e 100%);
         color: white;
         border: none;
-        border-radius: 14px;
-        padding: 0.75rem 1.3rem;
-        font-weight: 800;
-        box-shadow: 0 8px 18px rgba(193, 18, 31, 0.22);
+        border-radius: 16px;
+        padding: 0.78rem 1.35rem;
+        font-weight: 850;
+        box-shadow: 0 10px 22px rgba(15, 118, 110, 0.22);
     }
     </style>
     """,
@@ -227,13 +244,6 @@ def id_chips(ids):
 
 
 def obtener_columnas_tareas(df):
-    """
-    Esta es la corrección importante.
-    Antes el código usaba columns[2:], pero en tu Excel actual
-    Llenadora está en la segunda columna, justo después de ID_Worker.
-    Por eso ahora se eliminan solo las columnas que NO son tareas.
-    """
-
     columnas_no_tareas = [
         "ID_Worker",
         "Name",
@@ -252,13 +262,6 @@ def obtener_columnas_tareas(df):
 
 
 def construir_matriz(df):
-    """
-    Construye una matriz tipo:
-    matriz[ID_Worker][Tarea] = valor
-
-    Sirve tanto para Abilities como para Speed_Factor.
-    """
-
     columnas_tareas = obtener_columnas_tareas(df)
 
     matriz = {}
@@ -279,6 +282,80 @@ def construir_matriz(df):
             matriz[worker][str(tarea).strip()] = float(valor)
 
     return matriz, columnas_tareas
+
+
+def tabla_verde(df):
+    columnas_numericas = df.select_dtypes(include=["number"]).columns.tolist()
+
+    if len(columnas_numericas) > 0:
+        return (
+            df.style
+            .background_gradient(
+                subset=columnas_numericas,
+                cmap="Greens"
+            )
+            .set_table_styles(
+                [
+                    {
+                        "selector": "th",
+                        "props": [
+                            ("background-color", "#064e3b"),
+                            ("color", "white"),
+                            ("font-weight", "bold")
+                        ]
+                    },
+                    {
+                        "selector": "td",
+                        "props": [
+                            ("border-color", "#d9f2e3")
+                        ]
+                    }
+                ]
+            )
+        )
+
+    return (
+        df.style
+        .set_table_styles(
+            [
+                {
+                    "selector": "th",
+                    "props": [
+                        ("background-color", "#064e3b"),
+                        ("color", "white"),
+                        ("font-weight", "bold")
+                    ]
+                }
+            ]
+        )
+    )
+
+
+def ordenar_maquinas(df):
+    orden_deseado = [
+        "Descapsuladora",
+        "Lavadora",
+        "Llenadora",
+        "Etiquetadora",
+        "Empacadora",
+        "Paletizadora"
+    ]
+
+    df = df.copy()
+
+    df["Orden_Maquina"] = df["Maquina"].apply(
+        lambda x: orden_deseado.index(x)
+        if x in orden_deseado
+        else 999
+    )
+
+    df = df.sort_values(
+        ["Orden_Maquina", "ID_Task"]
+    ).drop(
+        columns=["Orden_Maquina"]
+    )
+
+    return df
 
 
 # ============================================================
@@ -332,19 +409,38 @@ if archivo is None:
 # ============================================================
 
 try:
-    tasks_df = pd.read_excel(archivo, sheet_name="Tasks")
+    tasks_df = pd.read_excel(
+        archivo,
+        sheet_name="Tasks"
+    )
+
     archivo.seek(0)
 
-    rel_speed_df = pd.read_excel(archivo, sheet_name="Rel_Speed")
+    rel_speed_df = pd.read_excel(
+        archivo,
+        sheet_name="Rel_Speed"
+    )
+
     archivo.seek(0)
 
-    workers_df = pd.read_excel(archivo, sheet_name="Workers")
+    workers_df = pd.read_excel(
+        archivo,
+        sheet_name="Workers"
+    )
+
     archivo.seek(0)
 
-    abilities_df = pd.read_excel(archivo, sheet_name="Abilities")
+    abilities_df = pd.read_excel(
+        archivo,
+        sheet_name="Abilities"
+    )
+
     archivo.seek(0)
 
-    speed_df = pd.read_excel(archivo, sheet_name="Speed_Factor")
+    speed_df = pd.read_excel(
+        archivo,
+        sheet_name="Speed_Factor"
+    )
 
 except Exception as e:
     st.error(
@@ -409,13 +505,13 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
 
 with tab1:
     st.dataframe(
-        tasks_df,
+        tabla_verde(tasks_df),
         use_container_width=True
     )
 
 with tab2:
     st.dataframe(
-        rel_speed_df,
+        tabla_verde(rel_speed_df),
         use_container_width=True
     )
 
@@ -426,19 +522,19 @@ with tab3:
     ]
 
     st.dataframe(
-        workers_df[columnas_workers],
+        tabla_verde(workers_df[columnas_workers]),
         use_container_width=True
     )
 
 with tab4:
     st.dataframe(
-        abilities_df,
+        tabla_verde(abilities_df),
         use_container_width=True
     )
 
 with tab5:
     st.dataframe(
-        speed_df,
+        tabla_verde(speed_df),
         use_container_width=True
     )
 
@@ -451,7 +547,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-col_conf1, col_conf2, col_conf3 = st.columns([1.2, 1, 1])
+col_conf1, col_conf2, col_conf3 = st.columns(
+    [1.2, 1, 1]
+)
 
 with col_conf1:
     turnos_disponibles = sorted(
@@ -501,7 +599,7 @@ st.markdown(
 st.write("Operarios programados en el turno seleccionado:")
 
 st.dataframe(
-    workers_turno[["ID_Worker", "Schedule"]],
+    tabla_verde(workers_turno[["ID_Worker", "Schedule"]]),
     use_container_width=True
 )
 
@@ -544,7 +642,7 @@ with m1:
         "Operarios programados",
         len(trabajadores),
         "Total en el turno seleccionado",
-        "blue"
+        "teal"
     )
 
 with m2:
@@ -552,7 +650,7 @@ with m2:
         "Operarios ausentes",
         len(ausentes),
         "IDs marcados como no disponibles",
-        "red"
+        "orange"
     )
 
 with m3:
@@ -590,7 +688,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-if st.button("Calcular asignación óptima", type="primary"):
+if st.button(
+    "Calcular asignación óptima",
+    type="primary"
+):
 
     try:
         # ========================================================
@@ -636,7 +737,7 @@ if st.button("Calcular asignación óptima", type="primary"):
             st.stop()
 
         # ========================================================
-        # MATRICES CORREGIDAS
+        # MATRICES
         # ========================================================
 
         H, columnas_habilidades = construir_matriz(
@@ -648,7 +749,7 @@ if st.button("Calcular asignación óptima", type="primary"):
         )
 
         # ========================================================
-        # VALIDACIONES CORREGIDAS
+        # VALIDACIONES
         # ========================================================
 
         errores = []
@@ -666,7 +767,6 @@ if st.button("Calcular asignación óptima", type="primary"):
                 )
 
         tareas_faltantes_abilities = []
-
         tareas_faltantes_speed = []
 
         for j in tareas:
@@ -703,7 +803,9 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         candidatos_llenadora = []
 
-        nombre_llenadora = nombre_tarea[ID_LLENADORA]
+        nombre_llenadora = nombre_tarea[
+            ID_LLENADORA
+        ]
 
         for i in presentes:
 
@@ -767,10 +869,6 @@ if st.button("Calcular asignación óptima", type="primary"):
             "Asignacion_Optima_Con_Eficiencia",
             LpMinimize
         )
-
-        # ========================================================
-        # VARIABLES
-        # ========================================================
 
         x = LpVariable.dicts(
             "x",
@@ -981,9 +1079,8 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         else:
 
-            st.markdown(
-                '<div class="status-bad">El modelo no encontró solución óptima. Revisa si hay suficientes operarios presentes o si las restricciones son muy fuertes.</div>',
-                unsafe_allow_html=True
+            st.error(
+                "El modelo no encontró solución óptima. Revisa si hay suficientes operarios presentes o si las restricciones son muy fuertes."
             )
 
             st.write(
@@ -1094,6 +1191,10 @@ if st.button("Calcular asignación óptima", type="primary"):
             ]
         )
 
+        desv_df = ordenar_maquinas(
+            desv_df
+        )
+
         # ========================================================
         # LLENADORA Y PRODUCCIÓN
         # ========================================================
@@ -1157,7 +1258,7 @@ if st.button("Calcular asignación óptima", type="primary"):
                 "Velocidad llenadora",
                 f"{round(velocidad_llenadora, 2)}",
                 "botellas/min",
-                "green" if deficit_llenadora <= 0 else "red"
+                "green" if deficit_llenadora <= 0 else "orange"
             )
 
         with r2:
@@ -1166,7 +1267,7 @@ if st.button("Calcular asignación óptima", type="primary"):
                 "Producción estimada",
                 f"{round(botellas_reales, 0):,.0f}",
                 "botellas/turno",
-                "blue"
+                "teal"
             )
 
         with r3:
@@ -1175,7 +1276,7 @@ if st.button("Calcular asignación óptima", type="primary"):
                 "Eficiencia estimada",
                 f"{round(eficiencia, 2)}%",
                 "comparada con producción ideal",
-                "green" if eficiencia >= 100 else "orange"
+                "green" if eficiencia >= 100 else "lime"
             )
 
         with r4:
@@ -1184,32 +1285,10 @@ if st.button("Calcular asignación óptima", type="primary"):
                 "Pérdida estimada",
                 f"{round(perdida_botellas, 0):,.0f}",
                 "botellas/turno",
-                "red" if perdida_botellas > 0 else "green"
+                "orange" if perdida_botellas > 0 else "green"
             )
 
-        if deficit_llenadora > 0:
-
-            st.markdown(
-                """
-                <div class="status-bad">
-                    La llenadora quedó por debajo de la velocidad ideal.
-                    Esto reduce la producción estimada del turno.
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        else:
-
-            st.markdown(
-                """
-                <div class="status-good">
-                    La llenadora no quedó por debajo de la velocidad ideal.
-                    No hay pérdida por cuello de botella en llenadora.
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+        # Se eliminó la advertencia roja de la llenadora.
 
         # ========================================================
         # TABLAS
@@ -1221,7 +1300,7 @@ if st.button("Calcular asignación óptima", type="primary"):
         )
 
         st.dataframe(
-            asignaciones_df,
+            tabla_verde(asignaciones_df),
             use_container_width=True
         )
 
@@ -1231,7 +1310,7 @@ if st.button("Calcular asignación óptima", type="primary"):
         )
 
         st.dataframe(
-            desv_df,
+            tabla_verde(desv_df),
             use_container_width=True
         )
 
@@ -1241,7 +1320,7 @@ if st.button("Calcular asignación óptima", type="primary"):
         )
 
         st.dataframe(
-            fila_llenadora,
+            tabla_verde(fila_llenadora),
             use_container_width=True
         )
 
@@ -1298,40 +1377,24 @@ if st.button("Calcular asignación óptima", type="primary"):
         )
 
         st.dataframe(
-            resumen_produccion_df,
+            tabla_verde(resumen_produccion_df),
             use_container_width=True
         )
 
         # ========================================================
-        # GRÁFICAS
+        # GRÁFICA VELOCIDAD IDEAL VS ALCANZADA
         # ========================================================
 
         st.markdown(
-            '<div class="section-title">13. Visualización de resultados</div>',
+            '<div class="section-title">13. Visualización de velocidades</div>',
             unsafe_allow_html=True
         )
 
-        maquinas = []
-        vel_ideal = []
-        vel_real = []
+        grafica_df = desv_df.copy()
 
-        for j in tareas:
-
-            if m[j] == 1:
-
-                maquinas.append(
-                    machine_name[j]
-                )
-
-                vel_ideal.append(
-                    V_std[j]
-                )
-
-                vel_real.append(
-                    value(
-                        V_real[j]
-                    )
-                )
+        maquinas = grafica_df["Maquina"].tolist()
+        vel_ideal = grafica_df["Velocidad_Estandar"].tolist()
+        vel_real = grafica_df["Velocidad_Alcanzada"].tolist()
 
         fig1, ax1 = plt.subplots(
             figsize=(12, 6)
@@ -1341,16 +1404,26 @@ if st.button("Calcular asignación óptima", type="primary"):
             maquinas,
             vel_ideal,
             marker="o",
-            linewidth=2.5,
-            label="Velocidad ideal"
+            linewidth=3,
+            label="Velocidad ideal",
+            color="#064e3b"
         )
 
         ax1.plot(
             maquinas,
             vel_real,
             marker="o",
-            linewidth=2.5,
-            label="Velocidad alcanzada"
+            linewidth=3,
+            label="Velocidad alcanzada",
+            color="#22c55e"
+        )
+
+        ax1.fill_between(
+            range(len(maquinas)),
+            vel_ideal,
+            vel_real,
+            alpha=0.12,
+            color="#16a34a"
         )
 
         ax1.set_xlabel(
@@ -1365,14 +1438,19 @@ if st.button("Calcular asignación óptima", type="primary"):
             "Curva de velocidad ideal vs alcanzada"
         )
 
-        ax1.tick_params(
-            axis="x",
-            rotation=45
+        ax1.set_xticks(
+            range(len(maquinas))
+        )
+
+        ax1.set_xticklabels(
+            maquinas,
+            rotation=45,
+            ha="right"
         )
 
         ax1.grid(
             True,
-            alpha=0.3
+            alpha=0.25
         )
 
         ax1.legend()
@@ -1381,37 +1459,7 @@ if st.button("Calcular asignación óptima", type="primary"):
             fig1
         )
 
-        fig2, ax2 = plt.subplots(
-            figsize=(7, 5)
-        )
-
-        ax2.bar(
-            [
-                "Producción ideal",
-                "Producción estimada"
-            ],
-            [
-                botellas_ideales,
-                botellas_reales
-            ]
-        )
-
-        ax2.set_ylabel(
-            "Botellas por turno"
-        )
-
-        ax2.set_title(
-            "Producción ideal vs producción estimada"
-        )
-
-        ax2.grid(
-            axis="y",
-            alpha=0.3
-        )
-
-        st.pyplot(
-            fig2
-        )
+        # Se eliminó la gráfica de producción ideal vs producción estimada.
 
         fig3, ax3 = plt.subplots(
             figsize=(6, 5)
@@ -1423,13 +1471,15 @@ if st.button("Calcular asignación óptima", type="primary"):
             ],
             [
                 eficiencia
-            ]
+            ],
+            color="#16a34a"
         )
 
         ax3.axhline(
             y=100,
             linestyle="--",
-            label="Meta ideal 100%"
+            label="Meta ideal 100%",
+            color="#064e3b"
         )
 
         ax3.set_ylabel(
@@ -1450,7 +1500,7 @@ if st.button("Calcular asignación óptima", type="primary"):
 
         ax3.grid(
             axis="y",
-            alpha=0.3
+            alpha=0.25
         )
 
         ax3.legend()
@@ -1547,7 +1597,8 @@ if st.button("Calcular asignación óptima", type="primary"):
                 </p>
                 <p>
                 La eficiencia se obtiene comparando la producción estimada contra la producción ideal.
-                Si la llenadora queda por debajo de su velocidad estándar, la eficiencia disminuye.
+                La asignación generada busca proteger la llenadora porque esta tarea tiene impacto directo
+                en la producción del turno.
                 </p>
             </div>
             """,
