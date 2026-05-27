@@ -27,10 +27,11 @@ peso_deficit_llenadora = 10000
 peso_desviacion_otras = 1
 habilidad_minima = 1
 
-# CORRECCIÓN IMPORTANTE:
-# Antes se usaban 480 minutos.
-# Ahora se usan 403 minutos efectivos.
+# Minutos efectivos del turno
 MINUTOS_EFECTIVOS_TURNO = 403
+
+# Meta fija para calcular eficiencia
+META_EFICIENCIA_BOTELLAS = 96000
 
 # ============================================================
 # ESTILO VISUAL
@@ -1156,7 +1157,7 @@ if st.button(
         )
 
         # ========================================================
-        # LLENADORA Y PRODUCCIÓN
+        # LLENADORA, PRODUCCIÓN Y EFICIENCIA
         # ========================================================
 
         fila_llenadora = desv_df[
@@ -1187,16 +1188,20 @@ if st.button(
             minutos_turno
         )
 
+        # CORRECCIÓN SOLICITADA:
+        # La eficiencia se calcula dividiendo la producción estimada
+        # entre la meta fija de 96.000 botellas.
         eficiencia = (
             botellas_reales
             /
-            botellas_ideales
+            META_EFICIENCIA_BOTELLAS
         ) * 100
 
-        perdida_botellas = (
-            botellas_ideales
+        perdida_botellas = max(
+            META_EFICIENCIA_BOTELLAS
             -
-            botellas_reales
+            botellas_reales,
+            0
         )
 
         # ========================================================
@@ -1235,16 +1240,16 @@ if st.button(
             metric_card(
                 "Eficiencia estimada",
                 f"{round(eficiencia, 2)}%",
-                "comparada con producción ideal",
+                "calculada sobre meta de 96.000 botellas",
                 "green" if eficiencia >= 100 else "lime"
             )
 
         with r4:
 
             metric_card(
-                "Pérdida estimada",
+                "Pérdida frente a meta",
                 f"{round(perdida_botellas, 0):,.0f}",
-                f"botellas / {int(minutos_turno)} min efectivos",
+                "meta: 96.000 botellas",
                 "orange" if perdida_botellas > 0 else "green"
             )
 
@@ -1287,7 +1292,8 @@ if st.button(
                     "Velocidad alcanzada llenadora",
                     "Producción ideal del turno",
                     "Producción estimada del turno",
-                    "Pérdida estimada del turno",
+                    "Meta base para eficiencia",
+                    "Pérdida estimada frente a meta",
                     "Eficiencia estimada"
                 ],
                 "Valor": [
@@ -1308,6 +1314,7 @@ if st.button(
                         botellas_reales,
                         0
                     ),
+                    META_EFICIENCIA_BOTELLAS,
                     round(
                         perdida_botellas,
                         0
@@ -1321,6 +1328,7 @@ if st.button(
                     "minutos efectivos",
                     "botellas/min",
                     "botellas/min",
+                    "botellas/turno",
                     "botellas/turno",
                     "botellas/turno",
                     "botellas/turno",
@@ -1437,7 +1445,7 @@ if st.button(
         ax2.axhline(
             y=100,
             linestyle="--",
-            label="Meta ideal 100%",
+            label="Meta 100%",
             color="#064e3b"
         )
 
@@ -1446,7 +1454,7 @@ if st.button(
         )
 
         ax2.set_title(
-            "Eficiencia estimada de la línea"
+            "Eficiencia sobre meta de 96.000 botellas"
         )
 
         ax2.set_ylim(
@@ -1555,9 +1563,11 @@ if st.button(
                 <b>Producción estimada = velocidad alcanzada en llenadora × {int(minutos_turno)} minutos efectivos</b>
                 </p>
                 <p>
-                La eficiencia se obtiene comparando la producción estimada contra la producción ideal.
-                La asignación generada busca proteger la llenadora porque esta tarea tiene impacto directo
-                en la producción del turno.
+                La eficiencia se calcula dividiendo la producción estimada entre la meta fija
+                de <b>96.000 botellas</b>.
+                </p>
+                <p>
+                <b>Eficiencia = producción estimada / 96.000 × 100</b>
                 </p>
             </div>
             """,
